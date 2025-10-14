@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Search, Plus, X, Archive, Home } from 'lucide-react';
+import { Search, Plus, X, Archive, Home, Menu } from 'lucide-react';
 import { archivedOrders } from './archivedData';
 import Footer from './Footer';
 import { apiService } from './api';
@@ -40,6 +40,7 @@ const RepairOrderTracker = () => {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [dynamicArchives, setDynamicArchives] = useState<{ [month: string]: Order[] }>({});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   
   // Filter states
   const [sortBy, setSortBy] = useState<string>('none'); // 'none', 'firstShift', 'secondShift'
@@ -453,10 +454,43 @@ const RepairOrderTracker = () => {
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="flex flex-1 overflow-hidden">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+        )}
+
         {/* Sidebar */}
-        <div className={`w-64 border-r flex flex-col ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 fixed lg:relative z-50 w-64 border-r flex flex-col transition-transform duration-300 ease-in-out h-full ${
+          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
           <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className="flex items-center justify-between mb-2">
+            {/* Mobile Close Button */}
+            <div className="flex items-center justify-between mb-2 lg:hidden">
+              <div className="flex items-center gap-2">
+                <img 
+                  src="https://www.kenworth.com/media/w4jnzm4t/kenworth_logo-header-new-012023.png" 
+                  alt="Kenworth Logo" 
+                  className="h-8 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Desktop Logo */}
+            <div className="hidden lg:flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <img 
                   src="https://www.kenworth.com/media/w4jnzm4t/kenworth_logo-header-new-012023.png" 
@@ -489,7 +523,10 @@ const RepairOrderTracker = () => {
 
         <nav className="flex-1 overflow-y-auto p-4">
           <button
-            onClick={() => setActiveView('current')}
+            onClick={() => {
+              setActiveView('current');
+              setIsMobileMenuOpen(false);
+            }}
             className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg mb-2 transition-colors ${
               activeView === 'current'
                 ? isDarkMode 
@@ -505,7 +542,10 @@ const RepairOrderTracker = () => {
           </button>
 
           <button
-            onClick={() => setActiveView('history')}
+            onClick={() => {
+              setActiveView('history');
+              setIsMobileMenuOpen(false);
+            }}
             className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg mb-2 transition-colors ${
               activeView === 'history'
                 ? isDarkMode 
@@ -535,7 +575,10 @@ const RepairOrderTracker = () => {
           {archiveMonths.map((month) => (
             <button
               key={month}
-              onClick={() => setActiveView(month)}
+              onClick={() => {
+                setActiveView(month);
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-colors ${
                 activeView === month
                   ? isDarkMode
@@ -559,7 +602,10 @@ const RepairOrderTracker = () => {
           }).map((month) => (
             <button
               key={`dynamic-${month}`}
-              onClick={() => setActiveView(month)}
+              onClick={() => {
+                setActiveView(month);
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-colors ${
                 activeView === month
                   ? isDarkMode
@@ -588,35 +634,42 @@ const RepairOrderTracker = () => {
         {/* Header */}
         <div className={`border-b p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div className="flex items-center gap-2 lg:gap-4 flex-1">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className={`lg:hidden p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <Menu size={24} />
+              </button>
+              
+              <h2 className={`text-lg lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} truncate`}>
                 {activeView === 'current' ? 'Current Work In Progress' : 
                  activeView === 'history' ? 'Recent Activity (Last 72 Hours)' : 
                  activeView}
               </h2>
               
-              {/* Statistics Panel */}
+              {/* Statistics Panel - Hidden on mobile, shown on desktop */}
               {activeView === 'current' && (
-                <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border ${
+                <div className={`hidden xl:flex items-center gap-3 px-4 py-2 rounded-lg border ${
                   isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
                   {/* Active Cases */}
                   <div 
                     className="relative group flex items-center gap-2 cursor-help"
-                    title="Total number of active work-in-progress orders"
                   >
                     <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Active: <span className="font-bold">{stats.active}</span>
                     </span>
                     {/* Tooltip */}
-                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                    <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
                       isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
                     }`}>
                       Total active work-in-progress orders
-                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
-                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
-                      }`} style={{ marginTop: '-5px' }}></div>
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-t border-l border-gray-700' : 'bg-white border-t border-l border-gray-300'
+                      }`} style={{ marginBottom: '-5px' }}></div>
                     </div>
                   </div>
                   
@@ -625,7 +678,6 @@ const RepairOrderTracker = () => {
                   {/* 1st Shift Updates */}
                   <div 
                     className="relative group flex items-center gap-2 cursor-help"
-                    title="Orders updated by 1st shift in the last 24 hours"
                   >
                     <span className="text-sm text-blue-600 font-semibold">1st:</span>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -633,13 +685,13 @@ const RepairOrderTracker = () => {
                       <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
                     </span>
                     {/* Tooltip */}
-                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                    <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
                       isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
                     }`}>
                       Orders with 1st shift notes updated in last 24 hours
-                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
-                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
-                      }`} style={{ marginTop: '-5px' }}></div>
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-t border-l border-gray-700' : 'bg-white border-t border-l border-gray-300'
+                      }`} style={{ marginBottom: '-5px' }}></div>
                     </div>
                   </div>
                   
@@ -648,7 +700,6 @@ const RepairOrderTracker = () => {
                   {/* 2nd Shift Updates */}
                   <div 
                     className="relative group flex items-center gap-2 cursor-help"
-                    title="Orders updated by 2nd shift in the last 24 hours"
                   >
                     <span className="text-sm text-orange-600 font-semibold">2nd:</span>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -656,13 +707,13 @@ const RepairOrderTracker = () => {
                       <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
                     </span>
                     {/* Tooltip */}
-                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                    <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
                       isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
                     }`}>
                       Orders with 2nd shift notes updated in last 24 hours
-                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
-                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
-                      }`} style={{ marginTop: '-5px' }}></div>
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-t border-l border-gray-700' : 'bg-white border-t border-l border-gray-300'
+                      }`} style={{ marginBottom: '-5px' }}></div>
                     </div>
                   </div>
                   
@@ -671,20 +722,19 @@ const RepairOrderTracker = () => {
                   {/* Completed Orders */}
                   <div 
                     className="relative group flex items-center gap-2 cursor-help"
-                    title="Total completed and archived orders"
                   >
                     <Archive size={14} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Completed: <span className="font-bold">{stats.completed}</span>
                     </span>
                     {/* Tooltip */}
-                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                    <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
                       isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
                     }`}>
                       Total archived/completed orders across all months
-                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
-                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
-                      }`} style={{ marginTop: '-5px' }}></div>
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-t border-l border-gray-700' : 'bg-white border-t border-l border-gray-300'
+                      }`} style={{ marginBottom: '-5px' }}></div>
                     </div>
                   </div>
                 </div>
@@ -703,6 +753,40 @@ const RepairOrderTracker = () => {
           </div>
 
           <div className="space-y-3">
+            {/* Mobile Statistics Panel - Only on Current WIP */}
+            {activeView === 'current' && (
+              <div className={`xl:hidden grid grid-cols-2 gap-2 p-3 rounded-lg border ${
+                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                  <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Active: <span className="font-bold">{stats.active}</span>
+                  </span>
+                </div>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                  <Archive size={12} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Done: <span className="font-bold">{stats.completed}</span>
+                  </span>
+                </div>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                  <span className="text-xs text-blue-600 font-semibold">1st:</span>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="font-bold">{stats.firstShift24h}</span>
+                    <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
+                  </span>
+                </div>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                  <span className="text-xs text-orange-600 font-semibold">2nd:</span>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="font-bold">{stats.secondShift24h}</span>
+                    <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
+                  </span>
+                </div>
+              </div>
+            )}
+            
             <div className="relative">
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} size={18} />
               <input
@@ -720,7 +804,7 @@ const RepairOrderTracker = () => {
 
             {/* Filter Controls - Show for Current WIP and History */}
             {(activeView === 'current' || activeView === 'history') && (
-              <div className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg border ${
                 isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
               }`}>
                 <div>
@@ -875,26 +959,26 @@ const RepairOrderTracker = () => {
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-4 gap-4 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-3">
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Customer</span>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.customer}</p>
+                    <p className={`font-semibold text-sm sm:text-base truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.customer}</p>
                   </div>
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Unit</span>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.unit}</p>
+                    <p className={`font-semibold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.unit}</p>
                   </div>
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>R.O.#</span>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.ro}</p>
+                    <p className={`font-semibold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.ro}</p>
                   </div>
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Bay</span>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.bay}</p>
+                    <p className={`font-semibold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.bay}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div 
                     className="relative group cursor-help"
                     title={order.firstShift || 'No notes yet'}
@@ -941,7 +1025,7 @@ const RepairOrderTracker = () => {
                   </div>
                 </div>
 
-                <div className={`grid grid-cols-3 gap-4 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                   <div>
                     <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Repair Condition</span>
                     <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{order.repairCondition}</p>
@@ -964,14 +1048,15 @@ const RepairOrderTracker = () => {
                         e.stopPropagation(); // Prevent opening detail view
                         handleArchiveOrder(order.id!);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isDarkMode
                           ? 'bg-green-700 hover:bg-green-600 text-white'
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       }`}
                     >
                       <Archive size={16} />
-                      Mark as Completed
+                      <span className="hidden sm:inline">Mark as Completed</span>
+                      <span className="sm:hidden">Completed</span>
                     </button>
                   </div>
                 )}
@@ -995,17 +1080,18 @@ const RepairOrderTracker = () => {
 
       {/* Add Order Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`sticky top-0 border-b p-4 flex items-center justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>New Repair Order</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className={`rounded-lg w-full max-w-4xl my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`sticky top-0 border-b p-3 sm:p-4 flex items-center justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} z-10`}>
+              <h3 className={`text-lg sm:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>New Repair Order</h3>
               <button onClick={() => setShowAddForm(false)} className={isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}>
-                <X size={24} />
+                <X size={20} className="sm:hidden" />
+                <X size={24} className="hidden sm:block" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Customer</label>
                   <input
@@ -1231,39 +1317,41 @@ const RepairOrderTracker = () => {
 
       {/* View/Edit Order Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`sticky top-0 border-b p-4 flex items-center justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <div>
-                <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className={`rounded-lg w-full max-w-4xl my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`sticky top-0 border-b p-3 sm:p-4 flex items-start sm:items-center justify-between gap-2 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} z-10`}>
+              <div className="flex-1 min-w-0">
+                <h3 className={`text-base sm:text-xl font-bold truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   R.O. #{selectedOrder.ro} - {selectedOrder.customer}
                 </h3>
                 {activeView !== 'current' && (
-                  <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-xs sm:text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Archived - View Only
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-shrink-0">
                 {activeView === 'current' && (
                   <button
                     onClick={() => selectedOrder.id && handleDeleteOrder(selectedOrder.id)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    className="px-2 sm:px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
-                    Delete
+                    <span className="hidden sm:inline">Delete</span>
+                    <X size={16} className="sm:hidden" />
                   </button>
                 )}
                 <button
                   onClick={() => setSelectedOrder(null)}
                   className={isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}
                 >
-                  <X size={24} />
+                  <X size={20} className="sm:hidden" />
+                  <X size={24} className="hidden sm:block" />
                 </button>
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Customer</label>
                   <input
