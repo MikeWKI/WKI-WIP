@@ -38,6 +38,8 @@ const orderSchema = new mongoose.Schema({
     customerStatus: { type: String, default: '' },
     call: { type: String, default: '' },
     dateAdded: { type: String, default: () => new Date().toISOString().split('T')[0] },
+    firstShiftUpdatedAt: { type: Date, default: null },
+    secondShiftUpdatedAt: { type: Date, default: null },
 }, {
     timestamps: true
 });
@@ -106,7 +108,15 @@ app.post('/api/orders', async (req, res) => {
 // Update order
 app.put('/api/orders/:id', async (req, res) => {
     try {
-        const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const updateData = { ...req.body };
+        // Track individual field update timestamps
+        if (updateData.firstShift !== undefined) {
+            updateData.firstShiftUpdatedAt = new Date();
+        }
+        if (updateData.secondShift !== undefined) {
+            updateData.secondShiftUpdatedAt = new Date();
+        }
+        const order = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }

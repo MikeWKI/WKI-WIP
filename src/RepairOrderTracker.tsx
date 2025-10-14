@@ -25,6 +25,8 @@ interface Order {
   dateAdded: string;
   createdAt?: string;
   updatedAt?: string;
+  firstShiftUpdatedAt?: string;
+  secondShiftUpdatedAt?: string;
 }
 
 const RepairOrderTracker = () => {
@@ -38,6 +40,10 @@ const RepairOrderTracker = () => {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [dynamicArchives, setDynamicArchives] = useState<{ [month: string]: Order[] }>({});
+  
+  // Filter states
+  const [sortBy, setSortBy] = useState<string>('none'); // 'none', 'firstShift', 'secondShift'
+  const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
 
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
@@ -225,20 +231,57 @@ const RepairOrderTracker = () => {
     return 'unknown';
   };
 
-  const filteredOrders = globalSearch && searchTerm
-    ? getAllOrders().filter((order: Order) =>
-        order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.ro.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.bay.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.repairCondition.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.contactInfo.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : displayOrders.filter((order: Order) =>
-        order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.ro.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.unit.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const filteredOrders = (() => {
+    let orders = globalSearch && searchTerm
+      ? getAllOrders().filter((order: Order) =>
+          order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.ro.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.bay.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.repairCondition.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.contactInfo.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : displayOrders.filter((order: Order) =>
+          order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.ro.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.unit.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+    // Apply time filter (only for current view)
+    if (activeView === 'current' && timeFilter > 0) {
+      const now = new Date().getTime();
+      const filterMs = timeFilter * 60 * 1000; // Convert minutes to milliseconds
+      
+      orders = orders.filter((order: Order) => {
+        const firstShiftTime = order.firstShiftUpdatedAt ? new Date(order.firstShiftUpdatedAt).getTime() : 0;
+        const secondShiftTime = order.secondShiftUpdatedAt ? new Date(order.secondShiftUpdatedAt).getTime() : 0;
+        const mostRecent = Math.max(firstShiftTime, secondShiftTime);
+        
+        return mostRecent > 0 && (now - mostRecent) <= filterMs;
+      });
+    }
+
+    // Apply sorting (only for current view)
+    if (activeView === 'current' && sortBy !== 'none') {
+      orders = [...orders].sort((a, b) => {
+        let timeA = 0;
+        let timeB = 0;
+
+        if (sortBy === 'firstShift') {
+          timeA = a.firstShiftUpdatedAt ? new Date(a.firstShiftUpdatedAt).getTime() : 0;
+          timeB = b.firstShiftUpdatedAt ? new Date(b.firstShiftUpdatedAt).getTime() : 0;
+        } else if (sortBy === 'secondShift') {
+          timeA = a.secondShiftUpdatedAt ? new Date(a.secondShiftUpdatedAt).getTime() : 0;
+          timeB = b.secondShiftUpdatedAt ? new Date(b.secondShiftUpdatedAt).getTime() : 0;
+        }
+
+        // Sort newest first
+        return timeB - timeA;
+      });
+    }
+
+    return orders;
+  })();
 
   const handleAddOrder = async () => {
     // Validation: check required fields
@@ -498,6 +541,77 @@ const RepairOrderTracker = () => {
                 }`}
               />
             </div>
+
+            {/* Filter Controls - Only show for Current WIP */}
+            {activeView === 'current' && (
+              <div className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${
+                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div>
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="none">No Sorting</option>
+                    <option value="firstShift">Latest 1st Shift Updates</option>
+                    <option value="secondShift">Latest 2nd Shift Updates</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Updated Within
+                  </label>
+                  <select
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(Number(e.target.value))}
+                    className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="0">All Time</option>
+                    <option value="15">Last 15 mins</option>
+                    <option value="30">Last 30 mins</option>
+                    <option value="60">Last hour</option>
+                    <option value="120">Last 2 hours</option>
+                    <option value="240">Last 4 hours</option>
+                    <option value="480">Last 8 hours</option>
+                    <option value="1440">Last 24 hours</option>
+                  </select>
+                </div>
+
+                {(sortBy !== 'none' || timeFilter > 0) && (
+                  <div className="col-span-2">
+                    <button
+                      onClick={() => {
+                        setSortBy('none');
+                        setTimeFilter(0);
+                      }}
+                      className={`text-xs px-2 py-1 rounded transition-colors ${
+                        isDarkMode
+                          ? 'text-blue-400 hover:text-blue-300'
+                          : 'text-blue-600 hover:text-blue-700'
+                      }`}
+                    >
+                      Clear Filters
+                    </button>
+                    <span className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -611,9 +725,9 @@ const RepairOrderTracker = () => {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-blue-600 uppercase">1st Shift Notes</span>
-                      {order.updatedAt && activeView === 'current' && (
+                      {order.firstShiftUpdatedAt && activeView === 'current' && (
                         <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {formatTimestamp(order.updatedAt)}
+                          {formatTimestamp(order.firstShiftUpdatedAt)}
                         </span>
                       )}
                     </div>
@@ -633,9 +747,9 @@ const RepairOrderTracker = () => {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-orange-600 uppercase">2nd Shift Notes</span>
-                      {order.updatedAt && activeView === 'current' && (
+                      {order.secondShiftUpdatedAt && activeView === 'current' && (
                         <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {formatTimestamp(order.updatedAt)}
+                          {formatTimestamp(order.secondShiftUpdatedAt)}
                         </span>
                       )}
                     </div>
@@ -1036,9 +1150,9 @@ const RepairOrderTracker = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-sm font-medium text-blue-700">First Shift Notes</label>
-                    {selectedOrder.updatedAt && activeView === 'current' && (
+                    {selectedOrder.firstShiftUpdatedAt && activeView === 'current' && (
                       <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Last updated: {formatTimestamp(selectedOrder.updatedAt)}
+                        Last updated: {formatTimestamp(selectedOrder.firstShiftUpdatedAt)}
                       </span>
                     )}
                   </div>
@@ -1057,9 +1171,9 @@ const RepairOrderTracker = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-sm font-medium text-orange-700">Second Shift Notes</label>
-                    {selectedOrder.updatedAt && activeView === 'current' && (
+                    {selectedOrder.secondShiftUpdatedAt && activeView === 'current' && (
                       <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Last updated: {formatTimestamp(selectedOrder.updatedAt)}
+                        Last updated: {formatTimestamp(selectedOrder.secondShiftUpdatedAt)}
                       </span>
                     )}
                   </div>

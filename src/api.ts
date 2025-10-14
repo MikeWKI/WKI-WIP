@@ -21,6 +21,8 @@ export interface Order {
   dateAdded: string;
   createdAt?: string;
   updatedAt?: string;
+  firstShiftUpdatedAt?: string;
+  secondShiftUpdatedAt?: string;
 }
 
 class ApiService {

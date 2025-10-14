@@ -45,6 +45,8 @@ const orderSchema = new mongoose.Schema({
   customerStatus: { type: String, default: '' },
   call: { type: String, default: '' },
   dateAdded: { type: String, default: () => new Date().toISOString().split('T')[0] },
+  firstShiftUpdatedAt: { type: Date, default: null },
+  secondShiftUpdatedAt: { type: Date, default: null },
 }, {
   timestamps: true
 });
@@ -118,9 +120,19 @@ app.post('/api/orders', async (req: Request, res: Response) => {
 // Update order
 app.put('/api/orders/:id', async (req: Request, res: Response) => {
   try {
+    const updateData = { ...req.body };
+    
+    // Track individual field update timestamps
+    if (updateData.firstShift !== undefined) {
+      updateData.firstShiftUpdatedAt = new Date();
+    }
+    if (updateData.secondShift !== undefined) {
+      updateData.secondShiftUpdatedAt = new Date();
+    }
+    
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     if (!order) {
