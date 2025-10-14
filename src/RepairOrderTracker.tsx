@@ -171,6 +171,29 @@ const RepairOrderTracker = () => {
   const getDisplayOrders = (): Order[] => {
     if (activeView === 'current') {
       return orders;
+    } else if (activeView === 'history') {
+      // Show orders updated in the last 72 hours
+      const now = new Date().getTime();
+      const hours72Ms = 72 * 60 * 60 * 1000; // 72 hours in milliseconds
+      
+      return orders.filter((order: Order) => {
+        const firstShiftTime = order.firstShiftUpdatedAt ? new Date(order.firstShiftUpdatedAt).getTime() : 0;
+        const secondShiftTime = order.secondShiftUpdatedAt ? new Date(order.secondShiftUpdatedAt).getTime() : 0;
+        const mostRecent = Math.max(firstShiftTime, secondShiftTime);
+        
+        return mostRecent > 0 && (now - mostRecent) <= hours72Ms;
+      }).sort((a, b) => {
+        // Sort by most recent activity
+        const aTime = Math.max(
+          a.firstShiftUpdatedAt ? new Date(a.firstShiftUpdatedAt).getTime() : 0,
+          a.secondShiftUpdatedAt ? new Date(a.secondShiftUpdatedAt).getTime() : 0
+        );
+        const bTime = Math.max(
+          b.firstShiftUpdatedAt ? new Date(b.firstShiftUpdatedAt).getTime() : 0,
+          b.secondShiftUpdatedAt ? new Date(b.secondShiftUpdatedAt).getTime() : 0
+        );
+        return bTime - aTime; // Most recent first
+      });
     } else {
       // Check static archived orders first
       if (archivedOrders[activeView]) {
@@ -247,8 +270,8 @@ const RepairOrderTracker = () => {
           order.unit.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-    // Apply time filter (only for current view)
-    if (activeView === 'current' && timeFilter > 0) {
+    // Apply time filter (for current and history views)
+    if ((activeView === 'current' || activeView === 'history') && timeFilter > 0) {
       const now = new Date().getTime();
       const filterMs = timeFilter * 60 * 1000; // Convert minutes to milliseconds
       
@@ -261,8 +284,8 @@ const RepairOrderTracker = () => {
       });
     }
 
-    // Apply sorting (only for current view)
-    if (activeView === 'current' && sortBy !== 'none') {
+    // Apply sorting (for current and history views)
+    if ((activeView === 'current' || activeView === 'history') && sortBy !== 'none') {
       orders = [...orders].sort((a, b) => {
         let timeA = 0;
         let timeB = 0;
@@ -448,6 +471,26 @@ const RepairOrderTracker = () => {
             <span className="font-medium">Current WIP</span>
           </button>
 
+          <button
+            onClick={() => setActiveView('history')}
+            className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg mb-2 transition-colors ${
+              activeView === 'history'
+                ? isDarkMode 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-purple-50 text-purple-600'
+                : isDarkMode
+                  ? 'text-gray-300 hover:bg-gray-700'
+                  : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M12 7v5l4 2"/>
+            </svg>
+            <span className="font-medium">History (72hrs)</span>
+          </button>
+
           <div className="mt-6 mb-2">
             <div className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               <Archive size={16} />
@@ -513,7 +556,9 @@ const RepairOrderTracker = () => {
         <div className={`border-b p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {activeView === 'current' ? 'Current Work In Progress' : activeView}
+              {activeView === 'current' ? 'Current Work In Progress' : 
+               activeView === 'history' ? 'Recent Activity (Last 72 Hours)' : 
+               activeView}
             </h2>
             {activeView === 'current' && (
               <button
@@ -542,8 +587,8 @@ const RepairOrderTracker = () => {
               />
             </div>
 
-            {/* Filter Controls - Only show for Current WIP */}
-            {activeView === 'current' && (
+            {/* Filter Controls - Show for Current WIP and History */}
+            {(activeView === 'current' || activeView === 'history') && (
               <div className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${
                 isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
               }`}>
@@ -725,7 +770,7 @@ const RepairOrderTracker = () => {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-blue-600 uppercase">1st Shift Notes</span>
-                      {order.firstShiftUpdatedAt && activeView === 'current' && (
+                      {order.firstShiftUpdatedAt && (activeView === 'current' || activeView === 'history') && (
                         <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                           {formatTimestamp(order.firstShiftUpdatedAt)}
                         </span>
@@ -747,7 +792,7 @@ const RepairOrderTracker = () => {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-orange-600 uppercase">2nd Shift Notes</span>
-                      {order.secondShiftUpdatedAt && activeView === 'current' && (
+                      {order.secondShiftUpdatedAt && (activeView === 'current' || activeView === 'history') && (
                         <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                           {formatTimestamp(order.secondShiftUpdatedAt)}
                         </span>
