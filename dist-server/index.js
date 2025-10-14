@@ -67,6 +67,29 @@ const archivedOrderSchema = new mongoose.Schema({
     timestamps: true
 });
 const ArchivedOrder = mongoose.model('ArchivedOrder', archivedOrderSchema);
+// Shift Notes Schema
+const shiftNotesSchema = new mongoose.Schema({
+    notes: { type: String, required: true },
+    shift: { type: String, required: true }, // '1st' or '2nd'
+    author: { type: String, default: 'Anonymous' },
+    date: { type: String, required: true }, // ISO date string for the day
+    createdAt: { type: Date, default: Date.now },
+}, {
+    timestamps: true
+});
+const ShiftNotes = mongoose.model('ShiftNotes', shiftNotesSchema);
+// Archived Shift Notes Schema
+const archivedShiftNotesSchema = new mongoose.Schema({
+    notes: { type: String, required: true },
+    shift: { type: String, required: true },
+    author: { type: String, default: 'Anonymous' },
+    date: { type: String, required: true },
+    archiveDate: { type: String, required: true }, // Date when archived
+    createdAt: { type: Date },
+}, {
+    timestamps: true
+});
+const ArchivedShiftNotes = mongoose.model('ArchivedShiftNotes', archivedShiftNotesSchema);
 // API Routes
 // Get all orders
 app.get('/api/orders', async (req, res) => {
@@ -227,6 +250,124 @@ app.get('/api/health', (req, res) => {
         message: 'WKI-WIP API is running',
         mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
     });
+});
+// ===== Shift Notes Routes =====
+// Get today's shift notes (notes created today, not archived)
+app.get('/api/shift-notes/today', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const notes = await ShiftNotes.find({ date: today }).sort({ createdAt: 1 });
+        res.json(notes);
+    }
+    catch (error) {
+        console.error('Error fetching shift notes:', error);
+        res.status(500).json({ error: 'Failed to fetch shift notes' });
+    }
+});
+// Create new shift note
+app.post('/api/shift-notes', async (req, res) => {
+    try {
+        const { notes, shift, author } = req.body;
+        const today = new Date().toISOString().split('T')[0];
+        const newNote = new ShiftNotes({
+            notes,
+            shift,
+            author: author || 'Anonymous',
+            date: today
+        });
+        await newNote.save();
+        res.status(201).json(newNote);
+    }
+    catch (error) {
+        console.error('Error creating shift note:', error);
+        res.status(500).json({ error: 'Failed to create shift note' });
+    }
+});
+// Update shift note
+app.put('/api/shift-notes/:id', async (req, res) => {
+    try {
+        const { notes, shift, author } = req.body;
+        const updatedNote = await ShiftNotes.findByIdAndUpdate(req.params.id, { notes, shift, author }, { new: true });
+        if (!updatedNote) {
+            return res.status(404).json({ error: 'Shift note not found' });
+        }
+        res.json(updatedNote);
+    }
+    catch (error) {
+        console.error('Error updating shift note:', error);
+        res.status(500).json({ error: 'Failed to update shift note' });
+    }
+});
+// Delete shift note
+app.delete('/api/shift-notes/:id', async (req, res) => {
+    try {
+        const deletedNote = await ShiftNotes.findByIdAndDelete(req.params.id);
+        if (!deletedNote) {
+            return res.status(404).json({ error: 'Shift note not found' });
+        }
+        res.json({ message: 'Shift note deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting shift note:', error);
+        res.status(500).json({ error: 'Failed to delete shift note' });
+    }
+});
+// Archive old shift notes (called automatically or manually)
+app.post('/api/shift-notes/archive', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        // Find all notes that are not from today
+        const oldNotes = await ShiftNotes.find({ date: { $lt: today } });
+        if (oldNotes.length === 0) {
+            return res.json({ message: 'No notes to archive', archived: 0 });
+        }
+        // Move them to archived collection
+        const archivedNotes = oldNotes.map(note => ({
+            notes: note.notes,
+            shift: note.shift,
+            author: note.author,
+            date: note.date,
+            archiveDate: today,
+            createdAt: note.createdAt
+        }));
+        await ArchivedShiftNotes.insertMany(archivedNotes);
+        await ShiftNotes.deleteMany({ date: { $lt: today } });
+        res.json({ message: 'Notes archived successfully', archived: oldNotes.length });
+    }
+    catch (error) {
+        console.error('Error archiving shift notes:', error);
+        res.status(500).json({ error: 'Failed to archive shift notes' });
+    }
+});
+// Get archived shift notes (grouped by date)
+app.get('/api/shift-notes/archived', async (req, res) => {
+    try {
+        const archivedNotes = await ArchivedShiftNotes.find().sort({ date: -1, createdAt: 1 });
+        // Group by date
+        const groupedByDate = {};
+        archivedNotes.forEach(note => {
+            if (!groupedByDate[note.date]) {
+                groupedByDate[note.date] = [];
+            }
+            groupedByDate[note.date].push(note);
+        });
+        res.json(groupedByDate);
+    }
+    catch (error) {
+        console.error('Error fetching archived shift notes:', error);
+        res.status(500).json({ error: 'Failed to fetch archived shift notes' });
+    }
+});
+// Get archived shift notes for specific date
+app.get('/api/shift-notes/archived/:date', async (req, res) => {
+    try {
+        const notes = await ArchivedShiftNotes.find({ date: req.params.date }).sort({ createdAt: 1 });
+        res.json(notes);
+    }
+    catch (error) {
+        console.error('Error fetching archived shift notes for date:', error);
+        res.status(500).json({ error: 'Failed to fetch archived shift notes' });
+    }
 });
 // Start server
 app.listen(PORT, () => {

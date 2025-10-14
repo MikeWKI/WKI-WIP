@@ -25,6 +25,21 @@ export interface Order {
   secondShiftUpdatedAt?: string;
 }
 
+export interface ShiftNote {
+  _id?: string;
+  id?: string;
+  notes: string;
+  shift: string; // '1st' or '2nd'
+  author: string;
+  date: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ArchivedShiftNote extends ShiftNote {
+  archiveDate: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -189,6 +204,140 @@ class ApiService {
       }));
     } catch (error) {
       console.error('Error fetching archived orders:', error);
+      throw error;
+    }
+  }
+
+  // ===== Shift Notes Methods =====
+
+  // Get today's shift notes
+  async getTodayShiftNotes(): Promise<ShiftNote[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/today`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch shift notes');
+      }
+      const data = await response.json();
+      return data.map((note: any) => ({
+        ...note,
+        id: note._id
+      }));
+    } catch (error) {
+      console.error('Error fetching shift notes:', error);
+      throw error;
+    }
+  }
+
+  // Create shift note
+  async createShiftNote(note: { notes: string; shift: string; author?: string }): Promise<ShiftNote> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(note),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create shift note');
+      }
+      const data = await response.json();
+      return { ...data, id: data._id };
+    } catch (error) {
+      console.error('Error creating shift note:', error);
+      throw error;
+    }
+  }
+
+  // Update shift note
+  async updateShiftNote(id: string, note: { notes: string; shift: string; author?: string }): Promise<ShiftNote> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(note),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update shift note');
+      }
+      const data = await response.json();
+      return { ...data, id: data._id };
+    } catch (error) {
+      console.error('Error updating shift note:', error);
+      throw error;
+    }
+  }
+
+  // Delete shift note
+  async deleteShiftNote(id: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete shift note');
+      }
+    } catch (error) {
+      console.error('Error deleting shift note:', error);
+      throw error;
+    }
+  }
+
+  // Archive old shift notes
+  async archiveShiftNotes(): Promise<{ message: string; archived: number }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/archive`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to archive shift notes');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error archiving shift notes:', error);
+      throw error;
+    }
+  }
+
+  // Get archived shift notes grouped by date
+  async getArchivedShiftNotes(): Promise<{ [date: string]: ArchivedShiftNote[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/archived`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch archived shift notes');
+      }
+      const data = await response.json();
+      // Convert _id to id for all notes
+      const converted: { [date: string]: ArchivedShiftNote[] } = {};
+      Object.keys(data).forEach(date => {
+        converted[date] = data[date].map((note: any) => ({
+          ...note,
+          id: note._id
+        }));
+      });
+      return converted;
+    } catch (error) {
+      console.error('Error fetching archived shift notes:', error);
+      throw error;
+    }
+  }
+
+  // Get archived shift notes for specific date
+  async getArchivedShiftNotesByDate(date: string): Promise<ArchivedShiftNote[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/archived/${date}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch archived shift notes for date');
+      }
+      const data = await response.json();
+      return data.map((note: any) => ({
+        ...note,
+        id: note._id
+      }));
+    } catch (error) {
+      console.error('Error fetching archived shift notes for date:', error);
       throw error;
     }
   }
