@@ -108,6 +108,39 @@ const RepairOrderTracker = () => {
     localStorage.setItem('darkMode', isDarkMode.toString());
   }, [isDarkMode]);
 
+  // Calculate statistics
+  const getStatistics = () => {
+    const now = new Date().getTime();
+    const hours24Ms = 24 * 60 * 60 * 1000;
+    
+    const activeCount = orders.length;
+    
+    const firstShiftUpdates24h = orders.filter(order => {
+      const time = order.firstShiftUpdatedAt ? new Date(order.firstShiftUpdatedAt).getTime() : 0;
+      return time > 0 && (now - time) <= hours24Ms;
+    }).length;
+    
+    const secondShiftUpdates24h = orders.filter(order => {
+      const time = order.secondShiftUpdatedAt ? new Date(order.secondShiftUpdatedAt).getTime() : 0;
+      return time > 0 && (now - time) <= hours24Ms;
+    }).length;
+    
+    // Count completed orders from all archives
+    let completedCount = 0;
+    Object.values(dynamicArchives).forEach(archiveOrders => {
+      completedCount += archiveOrders.length;
+    });
+    
+    return {
+      active: activeCount,
+      firstShift24h: firstShiftUpdates24h,
+      secondShift24h: secondShiftUpdates24h,
+      completed: completedCount
+    };
+  };
+
+  const stats = getStatistics();
+
   // Load orders from API
   useEffect(() => {
     loadOrders();
@@ -555,11 +588,51 @@ const RepairOrderTracker = () => {
         {/* Header */}
         <div className={`border-b p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {activeView === 'current' ? 'Current Work In Progress' : 
-               activeView === 'history' ? 'Recent Activity (Last 72 Hours)' : 
-               activeView}
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                {activeView === 'current' ? 'Current Work In Progress' : 
+                 activeView === 'history' ? 'Recent Activity (Last 72 Hours)' : 
+                 activeView}
+              </h2>
+              
+              {/* Statistics Panel */}
+              {activeView === 'current' && (
+                <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border ${
+                  isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Active: <span className="font-bold">{stats.active}</span>
+                    </span>
+                  </div>
+                  <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600 font-semibold">1st:</span>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <span className="font-bold">{stats.firstShift24h}</span>
+                      <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
+                    </span>
+                  </div>
+                  <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-orange-600 font-semibold">2nd:</span>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <span className="font-bold">{stats.secondShift24h}</span>
+                      <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
+                    </span>
+                  </div>
+                  <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                  <div className="flex items-center gap-2">
+                    <Archive size={14} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Completed: <span className="font-bold">{stats.completed}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             {activeView === 'current' && (
               <button
                 onClick={() => setShowAddForm(true)}
