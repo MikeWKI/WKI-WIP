@@ -600,34 +600,92 @@ const RepairOrderTracker = () => {
                 <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border ${
                   isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
-                  <div className="flex items-center gap-2">
+                  {/* Active Cases */}
+                  <div 
+                    className="relative group flex items-center gap-2 cursor-help"
+                    title="Total number of active work-in-progress orders"
+                  >
                     <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Active: <span className="font-bold">{stats.active}</span>
                     </span>
+                    {/* Tooltip */}
+                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                      isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
+                    }`}>
+                      Total active work-in-progress orders
+                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
+                      }`} style={{ marginTop: '-5px' }}></div>
+                    </div>
                   </div>
+                  
                   <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                  <div className="flex items-center gap-2">
+                  
+                  {/* 1st Shift Updates */}
+                  <div 
+                    className="relative group flex items-center gap-2 cursor-help"
+                    title="Orders updated by 1st shift in the last 24 hours"
+                  >
                     <span className="text-sm text-blue-600 font-semibold">1st:</span>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <span className="font-bold">{stats.firstShift24h}</span>
                       <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
                     </span>
+                    {/* Tooltip */}
+                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                      isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
+                    }`}>
+                      Orders with 1st shift notes updated in last 24 hours
+                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
+                      }`} style={{ marginTop: '-5px' }}></div>
+                    </div>
                   </div>
+                  
                   <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                  <div className="flex items-center gap-2">
+                  
+                  {/* 2nd Shift Updates */}
+                  <div 
+                    className="relative group flex items-center gap-2 cursor-help"
+                    title="Orders updated by 2nd shift in the last 24 hours"
+                  >
                     <span className="text-sm text-orange-600 font-semibold">2nd:</span>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <span className="font-bold">{stats.secondShift24h}</span>
                       <span className={`text-xs ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(24h)</span>
                     </span>
+                    {/* Tooltip */}
+                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                      isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
+                    }`}>
+                      Orders with 2nd shift notes updated in last 24 hours
+                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
+                      }`} style={{ marginTop: '-5px' }}></div>
+                    </div>
                   </div>
+                  
                   <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                  <div className="flex items-center gap-2">
+                  
+                  {/* Completed Orders */}
+                  <div 
+                    className="relative group flex items-center gap-2 cursor-help"
+                    title="Total completed and archived orders"
+                  >
                     <Archive size={14} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Completed: <span className="font-bold">{stats.completed}</span>
                     </span>
+                    {/* Tooltip */}
+                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
+                      isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
+                    }`}>
+                      Total archived/completed orders across all months
+                      <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 ${
+                        isDarkMode ? 'bg-gray-900 border-r border-b border-gray-700' : 'bg-white border-r border-b border-gray-300'
+                      }`} style={{ marginTop: '-5px' }}></div>
+                    </div>
                   </div>
                 </div>
               )}
