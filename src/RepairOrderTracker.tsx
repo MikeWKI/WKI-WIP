@@ -43,6 +43,7 @@ const RepairOrderTracker = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [showShiftNotesModal, setShowShiftNotesModal] = useState<boolean>(false);
   const [shiftNotes, setShiftNotes] = useState<ShiftNote[]>([]);
+  const [yesterdayShiftNotes, setYesterdayShiftNotes] = useState<ShiftNote[]>([]);
   const [archivedShiftNotes, setArchivedShiftNotes] = useState<{ [date: string]: ArchivedShiftNote[] }>({});
   const [shiftNotesView, setShiftNotesView] = useState<'today' | 'archive'>('today');
   const [newShiftNote, setNewShiftNote] = useState({ notes: '', shift: '1st', author: '' });
@@ -163,11 +164,12 @@ const RepairOrderTracker = () => {
       loadOrders();
       loadArchives();
       loadShiftNotes();
+      loadYesterdayShiftNotes();
       loadArchivedShiftNotes();
       
-      // Check if it's past 1am and archive old notes automatically
+      // Check if it's past 8pm and archive old notes automatically
       const now = new Date();
-      if (now.getHours() >= 1) {
+      if (now.getHours() >= 20) {
         apiService.archiveShiftNotes().catch(err => console.error('Auto-archive failed:', err));
       }
     }
@@ -202,6 +204,15 @@ const RepairOrderTracker = () => {
       setShiftNotes(notes);
     } catch (err) {
       console.error('Failed to load shift notes:', err);
+    }
+  };
+
+  const loadYesterdayShiftNotes = async () => {
+    try {
+      const notes = await apiService.getYesterdayShiftNotes();
+      setYesterdayShiftNotes(notes);
+    } catch (err) {
+      console.error('Failed to load yesterday shift notes:', err);
     }
   };
 
@@ -1854,27 +1865,80 @@ const RepairOrderTracker = () => {
                     </div>
                   </div>
 
-                  {/* Today's Notes List */}
-                  <div className="space-y-3">
-                    <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Today's Notes ({shiftNotes.length})
-                    </h4>
-                    {shiftNotes.length === 0 ? (
-                      <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        No shift notes for today yet
-                      </div>
-                    ) : (
-                      shiftNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
+                  {/* Two-Column Layout: Today's Notes and Previous Day Notes */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Today's Notes Column */}
+                    <div className="space-y-3">
+                      <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Today's Notes ({shiftNotes.length})
+                      </h4>
+                      {shiftNotes.length === 0 ? (
+                        <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No shift notes for today yet
+                        </div>
+                      ) : (
+                        shiftNotes.map((note) => (
+                          <div
+                            key={note.id}
+                            className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  note.shift === '1st'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-orange-600 text-white'
+                                }`}>
+                                  {note.shift} Shift
+                                </span>
+                                {note.author && (
+                                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    by {note.author}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => note.id && handleDeleteShiftNote(note.id)}
+                                className={`p-1 rounded hover:bg-red-500 hover:text-white transition-colors ${
+                                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                }`}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                            <p className={`text-sm whitespace-pre-wrap ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                              {note.notes}
+                            </p>
+                            {note.createdAt && (
+                              <div className={`mt-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {new Date(note.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Previous Day Notes Column */}
+                    <div className="space-y-3">
+                      <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Previous Day Notes ({yesterdayShiftNotes.length})
+                      </h4>
+                      {yesterdayShiftNotes.length === 0 ? (
+                        <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No notes from previous day
+                        </div>
+                      ) : (
+                        yesterdayShiftNotes.map((note) => (
+                          <div
+                            key={note.id}
+                            className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
                               <span className={`px-2 py-1 rounded text-xs font-semibold ${
                                 note.shift === '1st'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-orange-600 text-white'
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-orange-500 text-white'
                               }`}>
                                 {note.shift} Shift
                               </span>
@@ -1884,26 +1948,18 @@ const RepairOrderTracker = () => {
                                 </span>
                               )}
                             </div>
-                            <button
-                              onClick={() => note.id && handleDeleteShiftNote(note.id)}
-                              className={`p-1 rounded hover:bg-red-500 hover:text-white transition-colors ${
-                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                              }`}
-                            >
-                              <X size={16} />
-                            </button>
+                            <p className={`text-sm whitespace-pre-wrap ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {note.notes}
+                            </p>
+                            {note.createdAt && (
+                              <div className={`mt-2 text-xs ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                                {new Date(note.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                              </div>
+                            )}
                           </div>
-                          <p className={`text-sm whitespace-pre-wrap ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                            {note.notes}
-                          </p>
-                          {note.createdAt && (
-                            <div className={`mt-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {new Date(note.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (

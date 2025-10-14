@@ -295,6 +295,20 @@ app.get('/api/shift-notes/today', async (req: Request, res: Response) => {
   }
 });
 
+// Get yesterday's shift notes (for handoff visibility)
+app.get('/api/shift-notes/yesterday', async (req: Request, res: Response) => {
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const notes = await ShiftNotes.find({ date: yesterdayStr }).sort({ createdAt: 1 });
+    res.json(notes);
+  } catch (error) {
+    console.error('Error fetching yesterday shift notes:', error);
+    res.status(500).json({ error: 'Failed to fetch yesterday shift notes' });
+  }
+});
+
 // Create new shift note
 app.post('/api/shift-notes', async (req: Request, res: Response) => {
   try {
@@ -354,12 +368,24 @@ app.delete('/api/shift-notes/:id', async (req: Request, res: Response) => {
 });
 
 // Archive old shift notes (called automatically or manually)
+// Only archives notes older than yesterday, and only after 8pm
 app.post('/api/shift-notes/archive', async (req: Request, res: Response) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentHour = now.getHours();
     
-    // Find all notes that are not from today
-    const oldNotes = await ShiftNotes.find({ date: { $lt: today } });
+    // Only archive after 8pm (20:00)
+    if (currentHour < 20) {
+      return res.json({ message: 'Archiving only occurs after 8pm', archived: 0 });
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Find all notes older than yesterday (keep today and yesterday visible)
+    const oldNotes = await ShiftNotes.find({ date: { $lt: yesterdayStr } });
     
     if (oldNotes.length === 0) {
       return res.json({ message: 'No notes to archive', archived: 0 });
@@ -376,7 +402,7 @@ app.post('/api/shift-notes/archive', async (req: Request, res: Response) => {
     }));
     
     await ArchivedShiftNotes.insertMany(archivedNotes);
-    await ShiftNotes.deleteMany({ date: { $lt: today } });
+    await ShiftNotes.deleteMany({ date: { $lt: yesterdayStr } });
     
     res.json({ message: 'Notes archived successfully', archived: oldNotes.length });
   } catch (error) {

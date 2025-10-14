@@ -285,6 +285,20 @@ class ApiService {
     }
   }
 
+  // Get yesterday's shift notes
+  async getYesterdayShiftNotes(): Promise<ShiftNote[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/shift-notes/yesterday`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch yesterday shift notes');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching yesterday shift notes:', error);
+      throw error;
+    }
+  }
+
   // Archive old shift notes
   async archiveShiftNotes(): Promise<{ message: string; archived: number }> {
     try {
