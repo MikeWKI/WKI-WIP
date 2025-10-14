@@ -23,6 +23,8 @@ interface Order {
   customerStatus: string;
   call: string;
   dateAdded: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const RepairOrderTracker = () => {
@@ -36,6 +38,38 @@ const RepairOrderTracker = () => {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [dynamicArchives, setDynamicArchives] = useState<{ [month: string]: Order[] }>({});
+
+  // Helper function to format timestamps
+  const formatTimestamp = (timestamp?: string): string => {
+    if (!timestamp) return '';
+    
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      // Less than 1 minute
+      if (diffMins < 1) return 'Just now';
+      // Less than 1 hour
+      if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+      // Less than 24 hours
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      // Less than 7 days
+      if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+      
+      // Otherwise show date
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (e) {
+      return '';
+    }
+  };
 
   // Detect system dark mode preference
   useEffect(() => {
@@ -575,8 +609,15 @@ const RepairOrderTracker = () => {
                     className="relative group cursor-help"
                     title={order.firstShift || 'No notes yet'}
                   >
-                    <span className="text-xs font-semibold text-blue-600 uppercase">1st Shift Notes</span>
-                    <p className={`text-sm mt-1 line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{order.firstShift || 'No notes yet'}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-blue-600 uppercase">1st Shift Notes</span>
+                      {order.updatedAt && activeView === 'current' && (
+                        <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {formatTimestamp(order.updatedAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{order.firstShift || 'No notes yet'}</p>
                     {order.firstShift && (
                       <div className={`absolute left-0 top-full mt-2 p-3 rounded-lg shadow-xl z-50 w-96 max-w-screen-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ${
                         isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
@@ -590,8 +631,15 @@ const RepairOrderTracker = () => {
                     className="relative group cursor-help"
                     title={order.secondShift || 'No notes yet'}
                   >
-                    <span className="text-xs font-semibold text-orange-600 uppercase">2nd Shift Notes</span>
-                    <p className={`text-sm mt-1 line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{order.secondShift || 'No notes yet'}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-orange-600 uppercase">2nd Shift Notes</span>
+                      {order.updatedAt && activeView === 'current' && (
+                        <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {formatTimestamp(order.updatedAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{order.secondShift || 'No notes yet'}</p>
                     {order.secondShift && (
                       <div className={`absolute right-0 top-full mt-2 p-3 rounded-lg shadow-xl z-50 w-96 max-w-screen-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ${
                         isDarkMode ? 'bg-gray-900 border border-gray-700 text-gray-200' : 'bg-white border border-gray-300 text-gray-800'
@@ -986,7 +1034,14 @@ const RepairOrderTracker = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">First Shift Notes</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-blue-700">First Shift Notes</label>
+                    {selectedOrder.updatedAt && activeView === 'current' && (
+                      <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Last updated: {formatTimestamp(selectedOrder.updatedAt)}
+                      </span>
+                    )}
+                  </div>
                   <textarea
                     value={selectedOrder.firstShift}
                     onChange={(e) => activeView === 'current' && selectedOrder.id && handleUpdateOrder(selectedOrder.id, 'firstShift', e.target.value)}
@@ -1000,7 +1055,14 @@ const RepairOrderTracker = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-orange-700 mb-1">Second Shift Notes</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-orange-700">Second Shift Notes</label>
+                    {selectedOrder.updatedAt && activeView === 'current' && (
+                      <span className={`text-xs italic ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Last updated: {formatTimestamp(selectedOrder.updatedAt)}
+                      </span>
+                    )}
+                  </div>
                   <textarea
                     value={selectedOrder.secondShift}
                     onChange={(e) => activeView === 'current' && selectedOrder.id && handleUpdateOrder(selectedOrder.id, 'secondShift', e.target.value)}

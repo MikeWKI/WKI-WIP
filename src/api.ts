@@ -19,6 +19,8 @@ export interface Order {
   customerStatus: string;
   call: string;
   dateAdded: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 class ApiService {
