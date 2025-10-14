@@ -330,12 +330,12 @@ const RepairOrderTracker = () => {
   const handleUpdateOrder = async (orderId: string | number, field: keyof Order, value: string) => {
     try {
       const id = orderId.toString();
-      await apiService.updateOrder(id, { [field]: value });
+      const updatedOrder = await apiService.updateOrder(id, { [field]: value });
       setOrders(orders.map((order: Order) =>
-        order.id === orderId ? { ...order, [field]: value } : order
+        order.id === orderId ? updatedOrder : order
       ));
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, [field]: value });
+        setSelectedOrder(updatedOrder);
       }
     } catch (err) {
       console.error('Failed to update order:', err);
