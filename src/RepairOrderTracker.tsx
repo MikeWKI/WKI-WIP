@@ -470,18 +470,22 @@ const RepairOrderTracker = () => {
   };
 
   const handleUpdateOrder = async (orderId: string | number, field: keyof Order, value: string) => {
+    // Optimistic update - update UI immediately
+    setOrders(orders.map((order: Order) =>
+      order.id === orderId ? { ...order, [field]: value } : order
+    ));
+    if (selectedOrder && selectedOrder.id === orderId) {
+      setSelectedOrder({ ...selectedOrder, [field]: value });
+    }
+
+    // Then sync with backend
     try {
       const id = orderId.toString();
-      const updatedOrder = await apiService.updateOrder(id, { [field]: value });
-      setOrders(orders.map((order: Order) =>
-        order.id === orderId ? updatedOrder : order
-      ));
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder(updatedOrder);
-      }
+      await apiService.updateOrder(id, { [field]: value });
     } catch (err) {
       console.error('Failed to update order:', err);
-      alert('Failed to update order. Please try again.');
+      // Reload orders to restore correct state if update failed
+      loadOrders();
     }
   };
 
@@ -567,7 +571,7 @@ const RepairOrderTracker = () => {
                   setPasswordInput(e.target.value);
                   setPasswordError('');
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 placeholder="Enter password"
                 autoFocus
               />
