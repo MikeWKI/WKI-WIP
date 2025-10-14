@@ -47,6 +47,12 @@ const RepairOrderTracker = () => {
   const [shiftNotesView, setShiftNotesView] = useState<'today' | 'archive'>('today');
   const [newShiftNote, setNewShiftNote] = useState({ notes: '', shift: '1st', author: '' });
   
+  // Password protection
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const CORRECT_PASSWORD = 'MERICA!';
+  
   // Filter states
   const [sortBy, setSortBy] = useState<string>('none'); // 'none', 'firstShift', 'secondShift'
   const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
@@ -149,17 +155,23 @@ const RepairOrderTracker = () => {
 
   // Load orders from API
   useEffect(() => {
-    loadOrders();
-    loadArchives();
-    loadShiftNotes();
-    loadArchivedShiftNotes();
+    // Check authentication status from sessionStorage
+    const isAuth = sessionStorage.getItem('wki_authenticated') === 'true';
+    setIsAuthenticated(isAuth);
     
-    // Check if it's past 1am and archive old notes automatically
-    const now = new Date();
-    if (now.getHours() >= 1) {
-      apiService.archiveShiftNotes().catch(err => console.error('Auto-archive failed:', err));
+    if (isAuth) {
+      loadOrders();
+      loadArchives();
+      loadShiftNotes();
+      loadArchivedShiftNotes();
+      
+      // Check if it's past 1am and archive old notes automatically
+      const now = new Date();
+      if (now.getHours() >= 1) {
+        apiService.archiveShiftNotes().catch(err => console.error('Auto-archive failed:', err));
+      }
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const loadOrders = async () => {
     try {
@@ -199,6 +211,18 @@ const RepairOrderTracker = () => {
       setArchivedShiftNotes(archived);
     } catch (err) {
       console.error('Failed to load archived shift notes:', err);
+    }
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === CORRECT_PASSWORD) {
+      setIsAuthenticated(true);
+      setPasswordError('');
+      sessionStorage.setItem('wki_authenticated', 'true');
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+      setPasswordInput('');
     }
   };
 
@@ -511,6 +535,58 @@ const RepairOrderTracker = () => {
       setIsLoading(false);
     }
   };
+
+  // Password screen
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-600 via-blue-600 to-blue-800">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+          <div className="text-center mb-6">
+            <img 
+              src="https://www.kenworth.com/media/w4jnzm4t/kenworth_logo-header-new-012023.png" 
+              alt="Kenworth Logo" 
+              className="h-16 object-contain mx-auto mb-4"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">WKI Service Department</h1>
+            <p className="text-gray-600">Work In Progress Tracker</p>
+          </div>
+          
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Access Code
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setPasswordError('');
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter password"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+              )}
+            </div>
+            
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
+            >
+              Access System
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
