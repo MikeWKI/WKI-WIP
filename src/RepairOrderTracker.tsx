@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Search, Plus, X, Archive, Home, Menu, FileText, Clock } from 'lucide-react';
+import { Search, Plus, X, Archive, Home, Menu, FileText, Clock, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { archivedOrders } from './archivedData';
 import Footer from './Footer';
 import { apiService, ShiftNote, ArchivedShiftNote } from './api';
@@ -59,6 +59,7 @@ const RepairOrderTracker = () => {
   // Filter states
   const [sortBy, setSortBy] = useState<string>('none'); // 'none', 'firstShift', 'secondShift'
   const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
+  const [showFilters, setShowFilters] = useState<boolean>(false); // Collapsible filters
 
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
@@ -993,70 +994,98 @@ const RepairOrderTracker = () => {
 
             {/* Filter Controls - Show for Current WIP and History */}
             {(activeView === 'current' || activeView === 'history') && (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg border ${
-                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-              }`}>
-                <div>
-                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
-                      isDarkMode 
-                        ? 'bg-gray-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  >
-                    <option value="none">No Sorting</option>
-                    <option value="firstShift">Latest 1st Shift Updates</option>
-                    <option value="secondShift">Latest 2nd Shift Updates</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Updated Within
-                  </label>
-                  <select
-                    value={timeFilter}
-                    onChange={(e) => setTimeFilter(Number(e.target.value))}
-                    className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
-                      isDarkMode 
-                        ? 'bg-gray-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  >
-                    <option value="0">All Time</option>
-                    <option value="15">Last 15 mins</option>
-                    <option value="30">Last 30 mins</option>
-                    <option value="60">Last hour</option>
-                    <option value="120">Last 2 hours</option>
-                    <option value="240">Last 4 hours</option>
-                    <option value="480">Last 8 hours</option>
-                    <option value="1440">Last 24 hours</option>
-                  </select>
-                </div>
-
-                {(sortBy !== 'none' || timeFilter > 0) && (
-                  <div className="col-span-2">
-                    <button
-                      onClick={() => {
-                        setSortBy('none');
-                        setTimeFilter(0);
-                      }}
-                      className={`text-xs px-2 py-1 rounded transition-colors ${
-                        isDarkMode
-                          ? 'text-blue-400 hover:text-blue-300'
-                          : 'text-blue-600 hover:text-blue-700'
-                      }`}
-                    >
-                      Clear Filters
-                    </button>
-                    <span className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
+              <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                {/* Filter Header - Always Visible */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`w-full flex items-center justify-between p-3 rounded-t-lg transition-colors ${
+                    isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Filter size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                    <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Filter & Sort Options
                     </span>
+                    {(sortBy !== 'none' || timeFilter > 0) && (
+                      <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-600 text-white">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  {showFilters ? (
+                    <ChevronUp size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                  ) : (
+                    <ChevronDown size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                  )}
+                </button>
+
+                {/* Filter Content - Collapsible */}
+                {showFilters && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}">
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
+                          isDarkMode 
+                            ? 'bg-gray-800 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        <option value="none">No Sorting</option>
+                        <option value="firstShift">Latest 1st Shift Updates</option>
+                        <option value="secondShift">Latest 2nd Shift Updates</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Updated Within
+                      </label>
+                      <select
+                        value={timeFilter}
+                        onChange={(e) => setTimeFilter(Number(e.target.value))}
+                        className={`w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
+                          isDarkMode 
+                            ? 'bg-gray-800 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        <option value="0">All Time</option>
+                        <option value="15">Last 15 mins</option>
+                        <option value="30">Last 30 mins</option>
+                        <option value="60">Last hour</option>
+                        <option value="120">Last 2 hours</option>
+                        <option value="240">Last 4 hours</option>
+                        <option value="480">Last 8 hours</option>
+                        <option value="1440">Last 24 hours</option>
+                      </select>
+                    </div>
+
+                    {(sortBy !== 'none' || timeFilter > 0) && (
+                      <div className="col-span-1 sm:col-span-2">
+                        <button
+                          onClick={() => {
+                            setSortBy('none');
+                            setTimeFilter(0);
+                          }}
+                          className={`text-xs px-2 py-1 rounded transition-colors ${
+                            isDarkMode
+                              ? 'text-blue-400 hover:text-blue-300'
+                              : 'text-blue-600 hover:text-blue-700'
+                          }`}
+                        >
+                          Clear Filters
+                        </button>
+                        <span className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
