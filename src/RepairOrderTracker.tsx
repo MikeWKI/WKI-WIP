@@ -35,6 +35,7 @@ const RepairOrderTracker = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [dynamicArchives, setDynamicArchives] = useState<{ [month: string]: Order[] }>({});
 
   // Detect system dark mode preference
   useEffect(() => {
@@ -70,6 +71,7 @@ const RepairOrderTracker = () => {
   // Load orders from API
   useEffect(() => {
     loadOrders();
+    loadArchives();
   }, []);
 
   const loadOrders = async () => {
@@ -83,6 +85,15 @@ const RepairOrderTracker = () => {
       setError('Failed to load orders. Please check if the server is running.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadArchives = async () => {
+    try {
+      const archives = await apiService.getAllArchives();
+      setDynamicArchives(archives);
+    } catch (err) {
+      console.error('Failed to load archives:', err);
     }
   };
 
@@ -121,8 +132,15 @@ const RepairOrderTracker = () => {
     if (activeView === 'current') {
       return orders;
     } else {
-      // Return archived orders for the selected month
-      return archivedOrders[activeView] || [];
+      // Check static archived orders first
+      if (archivedOrders[activeView]) {
+        return archivedOrders[activeView];
+      }
+      // Check dynamic archives from MongoDB
+      if (dynamicArchives[activeView]) {
+        return dynamicArchives[activeView];
+      }
+      return [];
     }
   };
 
@@ -132,10 +150,17 @@ const RepairOrderTracker = () => {
   const getAllOrders = (): Order[] => {
     const allOrders: Order[] = [...orders]; // Current orders
     
-    // Add all archived orders from all months
+    // Add all static archived orders from all months
     archiveMonths.forEach(month => {
       if (archivedOrders[month]) {
         allOrders.push(...archivedOrders[month]);
+      }
+    });
+    
+    // Add all dynamic archived orders from MongoDB
+    Object.keys(dynamicArchives).forEach(month => {
+      if (dynamicArchives[month]) {
+        allOrders.push(...dynamicArchives[month]);
       }
     });
     
@@ -149,9 +174,16 @@ const RepairOrderTracker = () => {
       return 'current';
     }
     
-    // Check archived months
+    // Check static archived months
     for (const month of archiveMonths) {
       if (archivedOrders[month]?.some(o => o.id === order.id && o.ro === order.ro)) {
+        return month;
+      }
+    }
+    
+    // Check dynamic archives
+    for (const month of Object.keys(dynamicArchives)) {
+      if (dynamicArchives[month]?.some(o => o.id === order.id && o.ro === order.ro)) {
         return month;
       }
     }
@@ -253,6 +285,38 @@ const RepairOrderTracker = () => {
     }
   };
 
+  const handleArchiveOrder = async (orderId: string | number) => {
+    if (!confirm('Mark this order as completed and move to archives?')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const id = orderId.toString();
+      
+      // Archive the order (backend will automatically use current month)
+      const result = await apiService.archiveOrder(id);
+      
+      // Remove from current orders
+      setOrders(orders.filter((order: Order) => order.id !== orderId));
+      
+      // Reload archives to show the new archived order
+      await loadArchives();
+      
+      // Close detail view if this order was selected
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(null);
+      }
+      
+      alert(`Order completed and archived to ${result.archiveMonth}!`);
+    } catch (err) {
+      console.error('Failed to archive order:', err);
+      alert('Failed to archive order. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="flex flex-1 overflow-hidden">
@@ -310,10 +374,11 @@ const RepairOrderTracker = () => {
           <div className="mt-6 mb-2">
             <div className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               <Archive size={16} />
-              <span>Completed/Archived Months</span>
+              <span>Completed/Archived</span>
             </div>
           </div>
 
+          {/* Static archive months from archivedData.ts */}
           {archiveMonths.map((month) => (
             <button
               key={month}
@@ -329,6 +394,37 @@ const RepairOrderTracker = () => {
               }`}
             >
               {month}
+            </button>
+          ))}
+
+          {/* Dynamic archive months from MongoDB */}
+          {Object.keys(dynamicArchives).sort((a, b) => {
+            // Sort newest first
+            const dateA = new Date(a.split(' ')[1] + '-' + a.split(' ')[0]);
+            const dateB = new Date(b.split(' ')[1] + '-' + b.split(' ')[0]);
+            return dateB.getTime() - dateA.getTime();
+          }).map((month) => (
+            <button
+              key={`dynamic-${month}`}
+              onClick={() => setActiveView(month)}
+              className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-colors ${
+                activeView === month
+                  ? isDarkMode
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-100 text-gray-900'
+                  : isDarkMode
+                    ? 'text-gray-400 hover:bg-gray-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {month}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  isDarkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700'
+                }`}>
+                  {dynamicArchives[month].length}
+                </span>
+              </span>
             </button>
           ))}
         </nav>
@@ -521,6 +617,26 @@ const RepairOrderTracker = () => {
                     <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{order.accountStatus}</p>
                   </div>
                 </div>
+
+                {/* Mark as Completed button - only show for current orders */}
+                {activeView === 'current' && !globalSearch && order.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent opening detail view
+                        handleArchiveOrder(order.id!);
+                      }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        isDarkMode
+                          ? 'bg-green-700 hover:bg-green-600 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      <Archive size={16} />
+                      Mark as Completed
+                    </button>
+                  </div>
+                )}
               </div>
             );
             })}

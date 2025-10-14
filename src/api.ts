@@ -126,6 +126,68 @@ class ApiService {
       throw error;
     }
   }
+
+  // Archive an order (mark as completed)
+  async archiveOrder(id: string, archiveMonth?: string): Promise<{ message: string; archivedOrder: Order; archiveMonth: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/${id}/archive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archiveMonth }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to archive order');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error archiving order:', error);
+      throw error;
+    }
+  }
+
+  // Get all archived orders grouped by month
+  async getAllArchives(): Promise<{ [month: string]: Order[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/archives`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch archives');
+      }
+      const data = await response.json();
+      // Convert _id to id for all archived orders
+      const converted: { [month: string]: Order[] } = {};
+      Object.keys(data).forEach(month => {
+        converted[month] = data[month].map((order: any) => ({
+          ...order,
+          id: order._id
+        }));
+      });
+      return converted;
+    } catch (error) {
+      console.error('Error fetching archives:', error);
+      throw error;
+    }
+  }
+
+  // Get archived orders for a specific month
+  async getArchivesByMonth(month: string): Promise<Order[]> {
+    try {
+      const monthParam = month.replace(/ /g, '-'); // Convert "October 2025" to "October-2025"
+      const response = await fetch(`${this.baseUrl}/archives/${monthParam}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch archived orders');
+      }
+      const data = await response.json();
+      return data.map((order: any) => ({
+        ...order,
+        id: order._id
+      }));
+    } catch (error) {
+      console.error('Error fetching archived orders:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = new ApiService();
