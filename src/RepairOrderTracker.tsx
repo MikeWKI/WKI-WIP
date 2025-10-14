@@ -47,6 +47,8 @@ const RepairOrderTracker = () => {
   const [archivedShiftNotes, setArchivedShiftNotes] = useState<{ [date: string]: ArchivedShiftNote[] }>({});
   const [shiftNotesView, setShiftNotesView] = useState<'today' | 'archive'>('today');
   const [newShiftNote, setNewShiftNote] = useState({ notes: '', shift: '1st', author: '' });
+  const [defaultAuthor, setDefaultAuthor] = useState<string>('');
+  const [showNamePrompt, setShowNamePrompt] = useState<boolean>(false);
   
   // Password protection
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -160,6 +162,13 @@ const RepairOrderTracker = () => {
     const isAuth = sessionStorage.getItem('wki_authenticated') === 'true';
     setIsAuthenticated(isAuth);
     
+    // Load default author from localStorage
+    const savedAuthor = localStorage.getItem('wki_default_author');
+    if (savedAuthor) {
+      setDefaultAuthor(savedAuthor);
+      setNewShiftNote(prev => ({ ...prev, author: savedAuthor }));
+    }
+    
     if (isAuth) {
       loadOrders();
       loadArchives();
@@ -235,6 +244,21 @@ const RepairOrderTracker = () => {
       setPasswordError('Incorrect password. Please try again.');
       setPasswordInput('');
     }
+  };
+
+  const handleSaveDefaultAuthor = (name: string) => {
+    if (name.trim()) {
+      localStorage.setItem('wki_default_author', name.trim());
+      setDefaultAuthor(name.trim());
+      setNewShiftNote(prev => ({ ...prev, author: name.trim() }));
+    }
+    setShowNamePrompt(false);
+  };
+
+  const handleClearDefaultAuthor = () => {
+    localStorage.removeItem('wki_default_author');
+    setDefaultAuthor('');
+    setNewShiftNote(prev => ({ ...prev, author: '' }));
   };
 
   const handleAddShiftNote = async () => {
@@ -1828,12 +1852,31 @@ const RepairOrderTracker = () => {
                           </select>
                         </div>
                         <div>
-                          <label className={`block text-xs font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Author (Optional)</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className={`block text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Author {defaultAuthor && <span className="text-green-600">✓</span>}
+                            </label>
+                            {defaultAuthor ? (
+                              <button
+                                onClick={handleClearDefaultAuthor}
+                                className={`text-xs ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
+                              >
+                                Clear Default
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setShowNamePrompt(true)}
+                                className={`text-xs ${isDarkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'}`}
+                              >
+                                Set Default
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="text"
                             value={newShiftNote.author}
                             onChange={(e) => setNewShiftNote({ ...newShiftNote, author: e.target.value })}
-                            placeholder="Your name"
+                            placeholder={defaultAuthor || "Your name"}
                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
                               isDarkMode 
                                 ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500' 
@@ -2010,6 +2053,57 @@ const RepairOrderTracker = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Name Prompt Modal */}
+      {showNamePrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`rounded-lg p-6 max-w-md w-full ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h3 className={`text-lg font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Set Default Author Name
+            </h3>
+            <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Your name will be automatically filled in when adding shift notes. You can always change it or clear this later.
+            </p>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const input = (e.target as HTMLFormElement).elements.namedItem('authorName') as HTMLInputElement;
+              handleSaveDefaultAuthor(input.value);
+            }}>
+              <input
+                type="text"
+                name="authorName"
+                defaultValue={newShiftNote.author}
+                placeholder="Enter your name"
+                autoFocus
+                className={`w-full px-4 py-2 border rounded-lg mb-4 focus:ring-2 focus:ring-purple-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNamePrompt(false)}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
