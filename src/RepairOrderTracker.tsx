@@ -664,7 +664,15 @@ const RepairOrderTracker = () => {
   };
 
   const handleDeleteOrder = async (orderId: string | number) => {
-    if (!confirm('Are you sure you want to delete this order?')) {
+    // Prompt for PIN
+    const pin = prompt('Enter PIN to delete this order:');
+    
+    if (pin !== '1971') {
+      alert('Incorrect PIN. Delete operation cancelled.');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
       return;
     }
     
@@ -674,6 +682,7 @@ const RepairOrderTracker = () => {
       await apiService.deleteOrder(id);
       setOrders(orders.filter((order: Order) => order.id !== orderId));
       setSelectedOrder(null);
+      alert('Order deleted successfully.');
     } catch (err) {
       console.error('Failed to delete order:', err);
       alert('Failed to delete order. Please try again.');
@@ -947,35 +956,35 @@ const RepairOrderTracker = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className={`border-b p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`border-b p-4 shadow-md ${isDarkMode ? 'bg-gradient-to-r from-gray-900 to-gray-800 border-gray-700' : 'bg-gradient-to-r from-white to-gray-50 border-gray-200'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 lg:gap-4 flex-1">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className={`lg:hidden p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                className={`lg:hidden p-2 rounded-lg transition-smooth hover:scale-105 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
               >
                 <Menu size={24} />
               </button>
               
-              <h2 className={`text-lg lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} truncate`}>
-                {activeView === 'current' ? 'Current Work In Progress' : 
-                 activeView === 'history' ? 'Recent Activity (Last 72 Hours)' : 
+              <h2 className={`text-lg lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent'} truncate`}>
+                {activeView === 'current' ? '🔧 Current Work In Progress' : 
+                 activeView === 'history' ? '📊 Recent Activity (Last 72 Hours)' : 
                  activeView}
               </h2>
               
               {/* Statistics Panel - Hidden on mobile, shown on desktop */}
               {activeView === 'current' && (
-                <div className={`hidden xl:flex items-center gap-3 px-4 py-2 rounded-lg border ${
-                  isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                <div className={`hidden xl:flex items-center gap-3 px-4 py-2 rounded-xl border shadow-lg transition-smooth hover:shadow-xl ${
+                  isDarkMode ? 'bg-gradient-to-r from-gray-800 to-gray-700 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-gray-200'
                 }`}>
                   {/* Active Cases */}
                   <div 
                     className="relative group flex items-center gap-2 cursor-help"
                   >
-                    <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
-                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Active: <span className="font-bold">{stats.active}</span>
+                    <div className={`w-2.5 h-2.5 rounded-full animate-pulse-soft ${isDarkMode ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-green-500 shadow-lg shadow-green-500/50'}`}></div>
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Active: <span className="font-bold text-lg">{stats.active}</span>
                     </span>
                     {/* Tooltip */}
                     <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 ${
@@ -1063,14 +1072,14 @@ const RepairOrderTracker = () => {
                     setShowShiftNotesModal(true);
                     setShiftNotesView('today');
                   }}
-                  className="flex items-center gap-2 bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 text-sm font-medium"
                 >
                   <FileText size={18} />
                   <span className="hidden sm:inline">Shift Notes</span>
                 </button>
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-blue-500/50 hover:scale-105 text-sm font-medium"
                 >
                   <Plus size={18} />
                   <span className="hidden sm:inline">New RO</span>
@@ -1083,22 +1092,22 @@ const RepairOrderTracker = () => {
           <div className="space-y-3">
             {/* Mobile Statistics Panel - Only on Current WIP */}
             {activeView === 'current' && (
-              <div className={`xl:hidden grid grid-cols-2 gap-2 p-3 rounded-lg border ${
-                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+              <div className={`xl:hidden grid grid-cols-2 gap-2 p-3 rounded-xl border shadow-md ${
+                isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-700 border-gray-600' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-gray-200'
               }`}>
-                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`}></div>
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-900/50' : 'bg-white/80'}`}>
+                  <div className={`w-2.5 h-2.5 rounded-full animate-pulse-soft ${isDarkMode ? 'bg-green-400 shadow-md shadow-green-400/50' : 'bg-green-500 shadow-md shadow-green-500/50'}`}></div>
+                  <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Active: <span className="font-bold">{stats.active}</span>
                   </span>
                 </div>
-                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-900/50' : 'bg-white/80'}`}>
                   <Archive size={12} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Done: <span className="font-bold">{stats.completed}</span>
                   </span>
                 </div>
-                <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-900/50' : 'bg-white/80'}`}>
                   <span className="text-xs text-blue-600 font-semibold">1st:</span>
                   <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     <span className="font-bold">{stats.firstShift24h}</span>
@@ -1293,10 +1302,10 @@ const RepairOrderTracker = () => {
               <div
                 key={`${order.ro}-${order.id}`}
                 onClick={() => setSelectedOrder(order)}
-                className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                className={`border rounded-xl p-4 transition-smooth cursor-pointer animate-slide-in ${
                   isDarkMode 
-                    ? 'bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 hover:shadow-lg' 
-                    : 'bg-white border-gray-200 hover:shadow-md hover:border-gray-300'
+                    ? 'bg-gradient-to-br from-gray-800 to-gray-850 border-gray-700 hover:from-gray-750 hover:to-gray-800 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20 hover:-translate-y-1' 
+                    : 'bg-white border-gray-200 hover:shadow-xl hover:shadow-blue-100 hover:border-blue-300 hover:-translate-y-1'
                 }`}
               >
                 {globalSearch && orderSource && (

@@ -1,0 +1,25 @@
+[
+  {
+    "_id": "69541f3ef22a9e0de9708668",
+    "customer": "Kan Equip",
+    "unit": "F0513",
+    "ro": "40831",
+    "bay": "PIT",
+    "firstShift": "Ticket in WOT slot of office, keys given to recon for task 6 NW 12.29 Tech 754 is on this for additional OPs. 12-29 DR 0700...........Air filter has been swapped, need a new drum of 75w-90 on monday, and need to talk to advisors about metal in the trans fluid. 12-27 TM 2:40.......Remington going on this to start on the remaining operations. 12-27 TM 1:15.....Got the new lift pump installed and it did not start or prime itself. Bypassed the filter and ran off of lift pump straight to the tank and the unit started. Put everything back together and it starts and primes as it should. unit is set up for RT. 12-23 TM 3:55......Logan is going back on this to continue removing the lift pump 12-23 TM 7:00......Tech 711 has started removing the transfer pump for replacement. 12-22 1600 JB. Tech 711 is looking into full priming issue. 12-22 900 JB. PRIMARY FUEL FILTER HOUSING NEEDS REPLACED. FUEL GEAR PUMP AND LIFT PUMP DAMAGED FROM TRYING TO PRIME. GAVE TICKET TO JB 1343 12-20SD LARYSSA ON THIS FOR FUEL ISSUE. 826 12-20 SD",
+    "secondShift": "drew got started on diff and trans will need finished up   drew performed pm service , could not get fuel filter off had to remove frame mount filter to get filter off , after change filter could not get truck to prime Will need to see if we can get somebody to prime it , also we need to check on a computer stand still 12/19/2400 DC",
+    "orderedParts": "",
+    "triageNotes": "",
+    "quoteStatus": "",
+    "repairCondition": "Kan Equip #F0513Unit will be dropped off and needs to be completed for pick up by 12/29.- PM Service- All air filters replaced- Transmission Service- All diffs serviced- Sub to Recon for int/ext cleaning- Install computer stand.",
+    "contactInfo": "Mike Herbers 316-942-2215 mike.herbers@kanequip.com",
+    "accountStatus": "",
+    "customerStatus": "",
+    "call": "",
+    "dateAdded": "2025-12-30",
+    "firstShiftUpdatedAt": null,
+    "secondShiftUpdatedAt": null,
+    "createdAt": "2025-12-30T18:51:42.553Z",
+    "updatedAt": "2025-12-30T18:51:42.553Z",
+    "__v": 0
+  }
+]
