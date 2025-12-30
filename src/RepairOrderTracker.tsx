@@ -642,15 +642,6 @@ const RepairOrderTracker = () => {
       event.target.value = '';
     }
   };
-      });
-      setShowAddForm(false);
-    } catch (err) {
-      console.error('Failed to add order:', err);
-      alert('Failed to add order. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleUpdateOrder = async (orderId: string | number, field: keyof Order, value: string) => {
     // Optimistic update - update UI immediately
