@@ -296,26 +296,51 @@ const RepairOrderTracker = () => {
   // Generate email template for shift handoff
   const generateShiftHandoffEmail = (shift: '1st' | '2nd') => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
     
-    // Define shift times in CST
+    // Get today's date in local timezone
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const day = now.getDate();
+    
+    // Define shift times using local timezone
     let shiftStart: Date, shiftEnd: Date;
     
     if (shift === '1st') {
-      // First shift: 6:30 AM to 3:30 PM CST
-      shiftStart = new Date(today + 'T06:30:00');
-      shiftEnd = new Date(today + 'T15:30:00');
+      // First shift: 6:30 AM to 3:30 PM
+      shiftStart = new Date(year, month, day, 6, 30, 0);
+      shiftEnd = new Date(year, month, day, 15, 30, 0);
     } else {
-      // Second shift: 3:30 PM to Midnight CST
-      shiftStart = new Date(today + 'T15:30:00');
-      shiftEnd = new Date(today + 'T23:59:59');
+      // Second shift: 3:30 PM to Midnight
+      shiftStart = new Date(year, month, day, 15, 30, 0);
+      shiftEnd = new Date(year, month, day, 23, 59, 59);
     }
     
-    // Filter orders updated during this shift
+    // Filter orders with changes relevant to this shift
     const shiftOrders = orders.filter(order => {
-      if (!order.updatedAt) return false;
-      const updateTime = new Date(order.updatedAt);
-      return updateTime >= shiftStart && updateTime <= shiftEnd;
+      // Check general updatedAt timestamp
+      if (order.updatedAt) {
+        const updateTime = new Date(order.updatedAt);
+        if (updateTime >= shiftStart && updateTime <= shiftEnd) {
+          return true;
+        }
+      }
+      
+      // Also check shift-specific update times
+      if (shift === '1st' && order.firstShiftUpdatedAt) {
+        const firstTime = new Date(order.firstShiftUpdatedAt);
+        if (firstTime >= shiftStart && firstTime <= shiftEnd) {
+          return true;
+        }
+      }
+      
+      if (shift === '2nd' && order.secondShiftUpdatedAt) {
+        const secondTime = new Date(order.secondShiftUpdatedAt);
+        if (secondTime >= shiftStart && secondTime <= shiftEnd) {
+          return true;
+        }
+      }
+      
+      return false;
     }).sort((a, b) => {
       const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
       const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
