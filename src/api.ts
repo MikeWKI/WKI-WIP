@@ -174,12 +174,14 @@ class ApiService {
         throw new Error('Failed to fetch archives');
       }
       const data = await response.json();
-      // Convert _id to id for all archived orders
+      // Convert _id to id and roNumber to ro for all archived orders
       const converted: { [month: string]: Order[] } = {};
       Object.keys(data).forEach(month => {
         converted[month] = data[month].map((order: any) => ({
           ...order,
-          id: order._id
+          id: order._id,
+          ro: order.roNumber || order.ro,
+          bay: order.bayNumber || order.bay
         }));
       });
       return converted;
@@ -200,7 +202,9 @@ class ApiService {
       const data = await response.json();
       return data.map((order: any) => ({
         ...order,
-        id: order._id
+        id: order._id,
+        ro: order.roNumber || order.ro,
+        bay: order.bayNumber || order.bay
       }));
     } catch (error) {
       console.error('Error fetching archived orders:', error);
