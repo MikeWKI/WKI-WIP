@@ -371,32 +371,38 @@ const RepairOrderTracker = () => {
       emailBody += `\n`;
     }
     
-    // Add updated customer records
+    // Add updated customer records (limit to 20 for mailto URL length)
     if (shiftOrders.length > 0) {
-      emailBody += `UPDATED CUSTOMER RECORDS (${shiftOrders.length} updates):\n`;
+      const displayLimit = 20;
+      const displayOrders = shiftOrders.slice(0, displayLimit);
+      const hasMore = shiftOrders.length > displayLimit;
+      
+      emailBody += `UPDATED CUSTOMER RECORDS (${shiftOrders.length} total${hasMore ? `, showing first ${displayLimit}` : ''}):\n`;
       emailBody += `${'-'.repeat(80)}\n\n`;
       
-      shiftOrders.forEach((order, idx) => {
+      displayOrders.forEach((order, idx) => {
         const updateTime = order.updatedAt ? new Date(order.updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
         
         emailBody += `${idx + 1}. R.O. #${order.ro} - ${order.customer}\n`;
         emailBody += `   Unit: ${order.unit}  |  Bay: ${order.bay}  |  Updated: ${updateTime}\n`;
-        emailBody += `   Repair Condition: ${order.repairCondition}\n`;
-        emailBody += `   Quote Status: ${order.quoteStatus}\n`;
+        
+        if (order.repairCondition) {
+          emailBody += `   Condition: ${order.repairCondition.substring(0, 60)}${order.repairCondition.length > 60 ? '...' : ''}\n`;
+        }
         
         if (order.firstShift && shift === '1st') {
-          emailBody += `   First Shift Notes: ${order.firstShift.substring(0, 200)}${order.firstShift.length > 200 ? '...' : ''}\n`;
+          emailBody += `   1st Shift: ${order.firstShift.substring(0, 120)}${order.firstShift.length > 120 ? '...' : ''}\n`;
         }
         if (order.secondShift && shift === '2nd') {
-          emailBody += `   Second Shift Notes: ${order.secondShift.substring(0, 200)}${order.secondShift.length > 200 ? '...' : ''}\n`;
-        }
-        
-        if (order.orderedParts) {
-          emailBody += `   Ordered Parts: ${order.orderedParts}\n`;
+          emailBody += `   2nd Shift: ${order.secondShift.substring(0, 120)}${order.secondShift.length > 120 ? '...' : ''}\n`;
         }
         
         emailBody += `\n`;
       });
+      
+      if (hasMore) {
+        emailBody += `... and ${shiftOrders.length - displayLimit} more updates (check WIP Tracker for full details)\n\n`;
+      }
     } else {
       emailBody += `UPDATED CUSTOMER RECORDS:\n`;
       emailBody += `${'-'.repeat(80)}\n`;
