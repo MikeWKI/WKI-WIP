@@ -1,8 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Search, Plus, X, Archive, Home, Menu, FileText, Clock, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Search, Plus, X, Archive, Home, Menu, FileText, Clock, ChevronDown, ChevronUp, Filter, Upload } from 'lucide-react';
 import { archivedOrders } from './archivedData';
 import Footer from './Footer';
 import { apiService, ShiftNote, ArchivedShiftNote } from './api';
+import { parseDecisivPDF } from './pdfParser';
 
 // Type definitions
 interface Order {
@@ -292,6 +293,101 @@ const RepairOrderTracker = () => {
     }
   };
 
+  // Generate email template for shift handoff
+  const generateShiftHandoffEmail = (shift: '1st' | '2nd') => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    // Define shift times in CST
+    let shiftStart: Date, shiftEnd: Date;
+    
+    if (shift === '1st') {
+      // First shift: 6:30 AM to 3:30 PM CST
+      shiftStart = new Date(today + 'T06:30:00');
+      shiftEnd = new Date(today + 'T15:30:00');
+    } else {
+      // Second shift: 3:30 PM to Midnight CST
+      shiftStart = new Date(today + 'T15:30:00');
+      shiftEnd = new Date(today + 'T23:59:59');
+    }
+    
+    // Filter orders updated during this shift
+    const shiftOrders = orders.filter(order => {
+      if (!order.updatedAt) return false;
+      const updateTime = new Date(order.updatedAt);
+      return updateTime >= shiftStart && updateTime <= shiftEnd;
+    }).sort((a, b) => {
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return bTime - aTime; // Most recent first
+    });
+
+    // Get shift notes for this shift
+    const shiftSpecificNotes = shiftNotes.filter(note => note.shift === shift);
+    
+    // Generate email content
+    const shiftName = shift === '1st' ? 'First Shift (6:30 AM - 3:30 PM)' : 'Second Shift (3:30 PM - Midnight)';
+    const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    let emailBody = `SHIFT HANDOFF NOTES\n`;
+    emailBody += `${shiftName}\n`;
+    emailBody += `${date}\n`;
+    emailBody += `${'='.repeat(80)}\n\n`;
+    
+    // Add shift notes
+    if (shiftSpecificNotes.length > 0) {
+      emailBody += `SHIFT NOTES:\n`;
+      emailBody += `${'-'.repeat(80)}\n`;
+      shiftSpecificNotes.forEach((note, idx) => {
+        emailBody += `${idx + 1}. ${note.author ? `[${note.author}] ` : ''}${note.notes}\n\n`;
+      });
+      emailBody += `\n`;
+    }
+    
+    // Add updated customer records
+    if (shiftOrders.length > 0) {
+      emailBody += `UPDATED CUSTOMER RECORDS (${shiftOrders.length} updates):\n`;
+      emailBody += `${'-'.repeat(80)}\n\n`;
+      
+      shiftOrders.forEach((order, idx) => {
+        const updateTime = order.updatedAt ? new Date(order.updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+        
+        emailBody += `${idx + 1}. R.O. #${order.ro} - ${order.customer}\n`;
+        emailBody += `   Unit: ${order.unit}  |  Bay: ${order.bay}  |  Updated: ${updateTime}\n`;
+        emailBody += `   Repair Condition: ${order.repairCondition}\n`;
+        emailBody += `   Quote Status: ${order.quoteStatus}\n`;
+        
+        if (order.firstShift && shift === '1st') {
+          emailBody += `   First Shift Notes: ${order.firstShift.substring(0, 200)}${order.firstShift.length > 200 ? '...' : ''}\n`;
+        }
+        if (order.secondShift && shift === '2nd') {
+          emailBody += `   Second Shift Notes: ${order.secondShift.substring(0, 200)}${order.secondShift.length > 200 ? '...' : ''}\n`;
+        }
+        
+        if (order.orderedParts) {
+          emailBody += `   Ordered Parts: ${order.orderedParts}\n`;
+        }
+        
+        emailBody += `\n`;
+      });
+    } else {
+      emailBody += `UPDATED CUSTOMER RECORDS:\n`;
+      emailBody += `${'-'.repeat(80)}\n`;
+      emailBody += `No customer records were updated during this shift.\n\n`;
+    }
+    
+    emailBody += `${'='.repeat(80)}\n`;
+    emailBody += `Total Active WIP: ${orders.length}\n`;
+    emailBody += `Updates This Shift: ${shiftOrders.length}\n`;
+    
+    // Create mailto link
+    const subject = `Shift Handoff - ${shiftName} - ${date}`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    // Open email client
+    window.location.href = mailtoLink;
+  };
+
   const [formData, setFormData] = useState<Omit<Order, 'id' | 'dateAdded'>>({
     customer: '',
     unit: '',
@@ -325,7 +421,14 @@ const RepairOrderTracker = () => {
   // Get the appropriate orders based on active view
   const getDisplayOrders = (): Order[] => {
     if (activeView === 'current') {
-      return orders;
+      // Sort current orders by most recently updated
+      return [...orders].sort((a, b) => {
+        const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 
+                      a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 
+                      b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime; // Most recent first
+      });
     } else if (activeView === 'history') {
       // Show orders updated in the last 72 hours
       const now = new Date().getTime();
@@ -495,6 +598,50 @@ const RepairOrderTracker = () => {
         accountStatus: '',
         customerStatus: '',
         call: ''
+      });
+      setShowAddForm(false);
+    } catch (err) {
+      console.error('Failed to add order:', err);
+      alert('Failed to add order. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle PDF upload and parsing
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's a PDF
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const parsedData = await parseDecisivPDF(file);
+      
+      if (parsedData) {
+        // Populate the form with parsed data
+        setFormData({
+          ...formData,
+          ...parsedData
+        });
+        alert('PDF parsed successfully! Please review the auto-filled data before submitting.');
+      } else {
+        alert('Could not parse PDF. Please fill in the form manually.');
+      }
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      alert('Error processing PDF. Please fill in the form manually.');
+    } finally {
+      setIsLoading(false);
+      // Clear the file input
+      event.target.value = '';
+    }
+  };
       });
       setShowAddForm(false);
     } catch (err) {
@@ -1177,6 +1324,34 @@ const RepairOrderTracker = () => {
                     </span>
                   </div>
                 )}
+                {/* Date Information Bar */}
+                <div className={`flex flex-wrap items-center gap-4 mb-3 pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  {order.dateAdded && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created:</span>
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        {new Date(order.dateAdded).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                  )}
+                  {order.updatedAt && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Last Edited:</span>
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {formatTimestamp(order.updatedAt)}
+                      </span>
+                    </div>
+                  )}
+                  {!order.updatedAt && order.createdAt && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Last Edited:</span>
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {formatTimestamp(order.createdAt)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-3">
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Customer</span>
@@ -1309,6 +1484,42 @@ const RepairOrderTracker = () => {
             </div>
 
             <div className="p-3 sm:p-6 space-y-4">
+              {/* PDF Upload Section */}
+              <div className={`p-4 rounded-lg border-2 border-dashed ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-300'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Import from Decisiv PDF
+                    </h4>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Upload a Decisiv case PDF to auto-fill the form
+                    </p>
+                  </div>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handlePDFUpload}
+                      className="hidden"
+                      disabled={isLoading}
+                    />
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      isLoading
+                        ? isDarkMode
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}>
+                      <Upload size={18} />
+                      <span className="hidden sm:inline">Upload PDF</span>
+                      <span className="sm:hidden">Upload</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Customer</label>
@@ -1848,13 +2059,35 @@ const RepairOrderTracker = () => {
                   </button>
                 </div>
               </div>
-              <button
-                onClick={() => setShowShiftNotesModal(false)}
-                className={isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}
-              >
-                <X size={20} className="sm:hidden" />
-                <X size={24} className="hidden sm:block" />
-              </button>
+              <div className="flex gap-2 items-center">
+                {shiftNotesView === 'today' && (
+                  <>
+                    <button
+                      onClick={() => generateShiftHandoffEmail('1st')}
+                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                      title="Generate email for 1st shift handoff"
+                    >
+                      <FileText size={14} />
+                      1st Shift Email
+                    </button>
+                    <button
+                      onClick={() => generateShiftHandoffEmail('2nd')}
+                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+                      title="Generate email for 2nd shift handoff"
+                    >
+                      <FileText size={14} />
+                      2nd Shift Email
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setShowShiftNotesModal(false)}
+                  className={isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}
+                >
+                  <X size={20} className="sm:hidden" />
+                  <X size={24} className="hidden sm:block" />
+                </button>
+              </div>
             </div>
 
             <div className="p-3 sm:p-6 space-y-4">
@@ -1935,6 +2168,24 @@ const RepairOrderTracker = () => {
                         Add Note
                       </button>
                     </div>
+                  </div>
+
+                  {/* Mobile Email Generation Buttons */}
+                  <div className="sm:hidden grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => generateShiftHandoffEmail('1st')}
+                      className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      <FileText size={16} />
+                      1st Shift Email
+                    </button>
+                    <button
+                      onClick={() => generateShiftHandoffEmail('2nd')}
+                      className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+                    >
+                      <FileText size={16} />
+                      2nd Shift Email
+                    </button>
                   </div>
 
                   {/* Two-Column Layout: Today's Notes and Previous Day Notes */}
