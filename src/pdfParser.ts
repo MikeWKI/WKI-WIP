@@ -26,8 +26,11 @@ export async function parseDecisivPDF(file: File): Promise<ParsedPDFData | null>
     // Import pdf.js dynamically
     const pdfjsLib = await import('pdfjs-dist');
     
-    // Set worker path
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    // Set worker path - use the npm package worker instead of CDN
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url
+    ).toString();
     
     // Load the PDF
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
