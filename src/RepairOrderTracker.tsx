@@ -61,6 +61,8 @@ const RepairOrderTracker = () => {
   const [sortBy, setSortBy] = useState<string>('none'); // 'none', 'firstShift', 'secondShift'
   const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
   const [showFilters, setShowFilters] = useState<boolean>(false); // Collapsible filters
+  const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
+  const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
 
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
@@ -430,18 +432,41 @@ const RepairOrderTracker = () => {
     call: ''
   });
 
-  const archiveMonths = [
-    'October 2025',
-    'September 2025',
-    'August 2025',
-    'July 2025',
-    'June 2025',
-    'May 2025',
-    'April 2025',
-    'March 2025',
-    'February 2025',
-    'January 2025'
-  ];
+  // Get combined archive months from both hardcoded data and MongoDB
+  const getAllArchiveMonths = (): string[] => {
+    const months = new Set<string>();
+    
+    // Add hardcoded archive months
+    Object.keys(archivedOrders).forEach(month => months.add(month));
+    
+    // Add dynamic MongoDB archive months
+    Object.keys(dynamicArchives).forEach(month => months.add(month));
+    
+    // Sort newest first
+    return Array.from(months).sort((a, b) => {
+      const dateA = new Date(a.split(' ')[1] + '-' + a.split(' ')[0]);
+      const dateB = new Date(b.split(' ')[1] + '-' + b.split(' ')[0]);
+      return dateB.getTime() - dateA.getTime();
+    });
+  };
+
+  // Get combined archive months from both hardcoded data and MongoDB
+  const getAllArchiveMonths = (): string[] => {
+    const months = new Set<string>();
+    
+    // Add hardcoded archive months
+    Object.keys(archivedOrders).forEach(month => months.add(month));
+    
+    // Add dynamic MongoDB archive months
+    Object.keys(dynamicArchives).forEach(month => months.add(month));
+    
+    // Sort newest first
+    return Array.from(months).sort((a, b) => {
+      const dateA = new Date(a.split(' ')[1] + '-' + a.split(' ')[0]);
+      const dateB = new Date(b.split(' ')[1] + '-' + b.split(' ')[0]);
+      return dateB.getTime() - dateA.getTime();
+    });
+  };
 
   // Get the appropriate orders based on active view
   const getDisplayOrders = (): Order[] => {
@@ -478,13 +503,21 @@ const RepairOrderTracker = () => {
         return bTime - aTime; // Most recent first
       });
     } else {
-      // Check static archived orders first
-      if (archivedOrders[activeView]) {
-        return archivedOrders[activeView];
-      }
-      // Check dynamic archives from MongoDB
-      if (dynamicArchives[activeView]) {
-        return dynamicArchives[activeView];
+      // Merge hardcoded archives and MongoDB archives for the same month
+      const hardcodedData = archivedOrders[activeView] || [];
+      const mongoData = dynamicArchives[activeView] || [];
+      
+      if (hardcodedData.length > 0 || mongoData.length > 0) {
+        // Combine and deduplicate by RO number
+        const combined = [...hardcodedData, ...mongoData];
+        const uniqueByRO = combined.reduce((acc, order) => {
+          const existing = acc.find(o => o.ro === order.ro);
+          if (!existing) {
+            acc.push(order);
+          }
+          return acc;
+        }, [] as Order[]);
+        return uniqueByRO;
       }
       return [];
     }
@@ -914,67 +947,71 @@ const RepairOrderTracker = () => {
           </button>
 
           <div className="mt-6 mb-2">
-            <div className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              <Archive size={16} />
-              <span>Completed/Archived</span>
-            </div>
-          </div>
-
-          {/* Static archive months from archivedData.ts */}
-          {archiveMonths.map((month) => (
             <button
-              key={month}
-              onClick={() => {
-                setActiveView(month);
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-colors ${
-                activeView === month
-                  ? isDarkMode
-                    ? 'bg-gray-700 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                  : isDarkMode
-                    ? 'text-gray-400 hover:bg-gray-700'
-                    : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {month}
-            </button>
-          ))}
-
-          {/* Dynamic archive months from MongoDB */}
-          {Object.keys(dynamicArchives).sort((a, b) => {
-            // Sort newest first
-            const dateA = new Date(a.split(' ')[1] + '-' + a.split(' ')[0]);
-            const dateB = new Date(b.split(' ')[1] + '-' + b.split(' ')[0]);
-            return dateB.getTime() - dateA.getTime();
-          }).map((month) => (
-            <button
-              key={`dynamic-${month}`}
-              onClick={() => {
-                setActiveView(month);
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-colors ${
-                activeView === month
-                  ? isDarkMode
-                    ? 'bg-gray-700 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                  : isDarkMode
-                    ? 'text-gray-400 hover:bg-gray-700'
-                    : 'text-gray-600 hover:bg-gray-50'
+              onClick={() => setShowArchives(!showArchives)}
+              className={`w-full flex items-center justify-between px-4 py-2 text-sm font-semibold transition-colors rounded-lg ${
+                isDarkMode 
+                  ? 'text-gray-300 hover:bg-gray-700' 
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               <span className="flex items-center gap-2">
-                {month}
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isDarkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700'
-                }`}>
-                  {dynamicArchives[month].length}
-                </span>
+                <Archive size={16} />
+                <span>Completed/Archived</span>
               </span>
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  showArchives ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
-          ))}
+          </div>
+
+          {/* Collapsible Archive Months */}
+          {showArchives && getAllArchiveMonths().map((month) => {
+            const hardcodedCount = archivedOrders[month]?.length || 0;
+            const mongoCount = dynamicArchives[month]?.length || 0;
+            const totalCount = hardcodedCount + mongoCount;
+            
+            return (
+              <button
+                key={month}
+                onClick={() => {
+                  setActiveView(month);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg mb-1 transition-smooth ml-4 ${
+                  activeView === month
+                    ? isDarkMode
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
+                      : 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-900 border border-blue-200'
+                    : isDarkMode
+                      ? 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                      : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className="flex items-center justify-between">
+                  <span>{month}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    activeView === month
+                      ? isDarkMode
+                        ? 'bg-blue-800 text-blue-100'
+                        : 'bg-blue-200 text-blue-800'
+                      : isDarkMode
+                        ? 'bg-gray-700 text-gray-300'
+                        : 'bg-gray-200 text-gray-700'
+                  }`}>
+                    {totalCount}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </nav>
         </div>
 
