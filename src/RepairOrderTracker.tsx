@@ -296,6 +296,7 @@ const RepairOrderTracker = () => {
 
   // Generate email template for shift handoff
   const generateShiftHandoffEmail = (shift: '1st' | '2nd') => {
+    console.log(`Generating ${shift} shift handoff email...`);
     const now = new Date();
     
     // Get today's date in local timezone
@@ -409,6 +410,9 @@ const RepairOrderTracker = () => {
     // Create mailto link
     const subject = `Shift Handoff - ${shiftName} - ${date}`;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    console.log(`Opening mailto link for ${shift} shift...`);
+    console.log(`Found ${shiftOrders.length} orders for this shift`);
     
     // Open email client
     window.location.href = mailtoLink;
