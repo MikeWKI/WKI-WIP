@@ -62,7 +62,6 @@ const RepairOrderTracker = () => {
   const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
   const [showFilters, setShowFilters] = useState<boolean>(false); // Collapsible filters
   const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
-  const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
 
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
@@ -450,24 +449,6 @@ const RepairOrderTracker = () => {
     });
   };
 
-  // Get combined archive months from both hardcoded data and MongoDB
-  const getAllArchiveMonths = (): string[] => {
-    const months = new Set<string>();
-    
-    // Add hardcoded archive months
-    Object.keys(archivedOrders).forEach(month => months.add(month));
-    
-    // Add dynamic MongoDB archive months
-    Object.keys(dynamicArchives).forEach(month => months.add(month));
-    
-    // Sort newest first
-    return Array.from(months).sort((a, b) => {
-      const dateA = new Date(a.split(' ')[1] + '-' + a.split(' ')[0]);
-      const dateB = new Date(b.split(' ')[1] + '-' + b.split(' ')[0]);
-      return dateB.getTime() - dateA.getTime();
-    });
-  };
-
   // Get the appropriate orders based on active view
   const getDisplayOrders = (): Order[] => {
     if (activeView === 'current') {
@@ -529,18 +510,11 @@ const RepairOrderTracker = () => {
   const getAllOrders = (): Order[] => {
     const allOrders: Order[] = [...orders]; // Current orders
     
-    // Add all static archived orders from all months
-    archiveMonths.forEach(month => {
-      if (archivedOrders[month]) {
-        allOrders.push(...archivedOrders[month]);
-      }
-    });
-    
-    // Add all dynamic archived orders from MongoDB
-    Object.keys(dynamicArchives).forEach(month => {
-      if (dynamicArchives[month]) {
-        allOrders.push(...dynamicArchives[month]);
-      }
+    // Add all archived orders from all months
+    getAllArchiveMonths().forEach(month => {
+      const hardcodedData = archivedOrders[month] || [];
+      const mongoData = dynamicArchives[month] || [];
+      allOrders.push(...hardcodedData, ...mongoData);
     });
     
     return allOrders;
@@ -553,16 +527,13 @@ const RepairOrderTracker = () => {
       return 'current';
     }
     
-    // Check static archived months
-    for (const month of archiveMonths) {
-      if (archivedOrders[month]?.some(o => o.id === order.id && o.ro === order.ro)) {
-        return month;
-      }
-    }
-    
-    // Check dynamic archives
-    for (const month of Object.keys(dynamicArchives)) {
-      if (dynamicArchives[month]?.some(o => o.id === order.id && o.ro === order.ro)) {
+    // Check archived months (both hardcoded and MongoDB)
+    for (const month of getAllArchiveMonths()) {
+      const hardcodedData = archivedOrders[month] || [];
+      const mongoData = dynamicArchives[month] || [];
+      const allMonthOrders = [...hardcodedData, ...mongoData];
+      
+      if (allMonthOrders.some(o => o.id === order.id && o.ro === order.ro)) {
         return month;
       }
     }
