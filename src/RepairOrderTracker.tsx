@@ -13,6 +13,7 @@ interface Order {
   unit: string;
   ro: string;
   bay: string;
+  decisivCase?: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;
