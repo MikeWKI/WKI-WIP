@@ -436,6 +436,21 @@ class ApiService {
       throw error;
     }
   }
+
+  async clearAllHistory(): Promise<{ message: string; deletedCount: number }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/history/clear`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to clear history');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error clearing history:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = new ApiService();

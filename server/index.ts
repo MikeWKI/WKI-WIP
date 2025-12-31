@@ -507,6 +507,17 @@ app.post('/api/history', async (req: Request, res: Response) => {
   }
 });
 
+// Clear all history (admin function)
+app.delete('/api/history/clear', async (req: Request, res: Response) => {
+  try {
+    const result = await History.deleteMany({});
+    res.json({ message: 'History cleared successfully', deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error('Error clearing history:', error);
+    res.status(500).json({ error: 'Failed to clear history' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

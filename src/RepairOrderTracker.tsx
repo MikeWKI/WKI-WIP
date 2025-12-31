@@ -1529,9 +1529,28 @@ const RepairOrderTracker = () => {
             <div className="space-y-4">
               {/* History Filters */}
               <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                <h3 className={`text-sm font-semibold mb-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                  Filter History
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    Filter History
+                  </h3>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to clear ALL history? This cannot be undone.')) {
+                        try {
+                          const result = await apiService.clearAllHistory();
+                          alert(`Cleared ${result.deletedCount} history entries`);
+                          setHistoryEntries([]);
+                        } catch (err) {
+                          console.error('Failed to clear history:', err);
+                          alert('Failed to clear history');
+                        }
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium ${isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                  >
+                    Clear All History
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <select
                     value={historyFilter.actionType || ''}
