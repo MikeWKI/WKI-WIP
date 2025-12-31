@@ -304,9 +304,7 @@ const RepairOrderTracker = () => {
       }
       
       // Hide idle screen if showing
-      if (showIdleScreen) {
-        setShowIdleScreen(false);
-      }
+      setShowIdleScreen(false);
       
       // Set new timer
       idleTimerRef.current = window.setTimeout(() => {
@@ -333,7 +331,7 @@ const RepairOrderTracker = () => {
         document.removeEventListener(event, resetIdleTimer);
       });
     };
-  }, [isAuthenticated, showIdleScreen]);
+  }, [isAuthenticated]);
 
   const loadOrders = async () => {
     try {
