@@ -471,6 +471,7 @@ const RepairOrderTracker = () => {
     }
 
     try {
+      const userName = localStorage.getItem('wki_user_name') || defaultAuthor || 'Unknown User';
       const updatedNote = await apiService.updateShiftNote(editingShiftNote.id, {
         notes: editingShiftNote.notes,
         shift: editingShiftNote.shift,
@@ -2645,8 +2646,8 @@ const RepairOrderTracker = () => {
                                     Shift
                                   </label>
                                   <select
-                                    value={editingShiftNote.shift}
-                                    onChange={(e) => setEditingShiftNote({ ...editingShiftNote, shift: e.target.value })}
+                                    value={editingShiftNote?.shift}
+                                    onChange={(e) => editingShiftNote && setEditingShiftNote({ ...editingShiftNote, shift: e.target.value })}
                                     className={`w-full px-3 py-2 rounded border ${
                                       isDarkMode
                                         ? 'bg-gray-600 border-gray-500 text-white'
@@ -2662,8 +2663,8 @@ const RepairOrderTracker = () => {
                                     Notes
                                   </label>
                                   <textarea
-                                    value={editingShiftNote.notes}
-                                    onChange={(e) => setEditingShiftNote({ ...editingShiftNote, notes: e.target.value })}
+                                    value={editingShiftNote?.notes}
+                                    onChange={(e) => editingShiftNote && setEditingShiftNote({ ...editingShiftNote, notes: e.target.value })}
                                     className={`w-full px-3 py-2 rounded border ${
                                       isDarkMode
                                         ? 'bg-gray-600 border-gray-500 text-white'
