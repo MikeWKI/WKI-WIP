@@ -120,6 +120,10 @@ const RepairOrderTracker = () => {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyFilter, setHistoryFilter] = useState<{ userName?: string; entityType?: string; actionType?: string }>({});
   
+  // Refs for debouncing history logging
+  const updateTimers = React.useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const originalValues = React.useRef<{ [key: string]: string }>({});
+  
   // Password protection
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>('');
@@ -813,9 +817,16 @@ const RepairOrderTracker = () => {
   };
 
   const handleUpdateOrder = async (orderId: string | number, field: keyof Order, value: string) => {
-    // Find the order being updated to capture old value
+    const id = orderId.toString();
+    const logKey = `${id}-${field}`;
+    
+    // Find the order being updated
     const orderToUpdate = orders.find(order => order.id === orderId);
-    const oldValue = orderToUpdate ? orderToUpdate[field] : '';
+    
+    // Store original value on first keystroke
+    if (!originalValues.current[logKey] && orderToUpdate) {
+      originalValues.current[logKey] = orderToUpdate[field] || '';
+    }
     
     // Optimistic update - update UI immediately
     setOrders(orders.map((order: Order) =>
@@ -825,26 +836,35 @@ const RepairOrderTracker = () => {
       setSelectedOrder({ ...selectedOrder, [field]: value });
     }
 
-    // Then sync with backend
-    try {
-      const id = orderId.toString();
-      await apiService.updateOrder(id, { [field]: value });
-      
-      // Log history if value actually changed
-      if (orderToUpdate && oldValue !== value) {
-        await logHistory(
-          'update',
-          'order',
-          id,
-          `${orderToUpdate.customer} - R.O. #${orderToUpdate.ro}`,
-          { field, oldValue, newValue: value }
-        );
-      }
-    } catch (err) {
-      console.error('Failed to update order:', err);
-      // Reload orders to restore correct state if update failed
-      loadOrders();
+    // Clear existing timer for this field
+    if (updateTimers.current[logKey]) {
+      clearTimeout(updateTimers.current[logKey]);
     }
+
+    // Set new timer - only log history after user stops typing for 2 seconds
+    updateTimers.current[logKey] = setTimeout(async () => {
+      try {
+        await apiService.updateOrder(id, { [field]: value });
+        
+        // Log history only if value actually changed from original
+        const originalValue = originalValues.current[logKey];
+        if (orderToUpdate && originalValue !== value) {
+          await logHistory(
+            'update',
+            'order',
+            id,
+            `${orderToUpdate.customer} - R.O. #${orderToUpdate.ro}`,
+            { field, oldValue: originalValue, newValue: value }
+          );
+        }
+        
+        // Clear the original value after logging
+        delete originalValues.current[logKey];
+      } catch (err) {
+        console.error('Failed to update order:', err);
+        loadOrders();
+      }
+    }, 2000); // 2 second debounce
   };
 
   const handleDeleteOrder = async (orderId: string | number) => {
