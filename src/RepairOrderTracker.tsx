@@ -830,9 +830,9 @@ const RepairOrderTracker = () => {
     
     // Optimistic update - update UI immediately
     setOrders(orders.map((order: Order) =>
-      order.id === orderId ? { ...order, [field]: value } : order
+      order.id?.toString() === id ? { ...order, [field]: value } : order
     ));
-    if (selectedOrder && selectedOrder.id === orderId) {
+    if (selectedOrder && selectedOrder.id?.toString() === id) {
       setSelectedOrder({ ...selectedOrder, [field]: value });
     }
 
