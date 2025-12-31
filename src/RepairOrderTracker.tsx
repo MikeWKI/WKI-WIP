@@ -30,6 +30,71 @@ interface Order {
   secondShiftUpdatedAt?: string;
 }
 
+// Name Prompt Component
+const NamePromptForm: React.FC<{ onSave: (name: string) => void }> = ({ onSave }) => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (firstName.trim() && lastName.trim()) {
+      onSave(`${firstName.trim()} ${lastName.trim()}`);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Welcome!</h2>
+        <p className="text-sm text-gray-600">Please enter your name to continue</p>
+      </div>
+      
+      <div>
+        <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+          First Name
+        </label>
+        <input
+          id="firstName"
+          type="text"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+          placeholder="Enter first name"
+          autoFocus
+          required
+        />
+      </div>
+      
+      <div>
+        <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+          Last Name
+        </label>
+        <input
+          id="lastName"
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+          placeholder="Enter last name"
+          required
+        />
+      </div>
+      
+      <button
+        type="submit"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
+        disabled={!firstName.trim() || !lastName.trim()}
+      >
+        Continue
+      </button>
+      
+      <p className="text-xs text-gray-500 text-center">
+        Your name will be saved to this browser and used to track your updates
+      </p>
+    </form>
+  );
+};
+
 const RepairOrderTracker = () => {
   const [activeView, setActiveView] = useState<string>('current');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
@@ -165,11 +230,14 @@ const RepairOrderTracker = () => {
     const isAuth = sessionStorage.getItem('wki_authenticated') === 'true';
     setIsAuthenticated(isAuth);
     
-    // Load default author from localStorage
+    // Load user name and author from localStorage
+    const savedName = localStorage.getItem('wki_user_name');
     const savedAuthor = localStorage.getItem('wki_default_author');
-    if (savedAuthor) {
-      setDefaultAuthor(savedAuthor);
-      setNewShiftNote(prev => ({ ...prev, author: savedAuthor }));
+    
+    if (savedName || savedAuthor) {
+      const name = savedName || savedAuthor;
+      setDefaultAuthor(name);
+      setNewShiftNote(prev => ({ ...prev, author: name }));
     }
     
     if (isAuth) {
@@ -240,9 +308,18 @@ const RepairOrderTracker = () => {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordInput === CORRECT_PASSWORD) {
-      setIsAuthenticated(true);
       setPasswordError('');
-      sessionStorage.setItem('wki_authenticated', 'true');
+      
+      // Check if user has a saved name
+      const savedName = localStorage.getItem('wki_user_name');
+      if (!savedName) {
+        // Show name prompt before full authentication
+        setShowNamePrompt(true);
+      } else {
+        // User already has a name saved, authenticate immediately
+        setIsAuthenticated(true);
+        sessionStorage.setItem('wki_authenticated', 'true');
+      }
     } else {
       setPasswordError('Incorrect password. Please try again.');
       setPasswordInput('');
@@ -252,8 +329,13 @@ const RepairOrderTracker = () => {
   const handleSaveDefaultAuthor = (name: string) => {
     if (name.trim()) {
       localStorage.setItem('wki_default_author', name.trim());
+      localStorage.setItem('wki_user_name', name.trim());
       setDefaultAuthor(name.trim());
       setNewShiftNote(prev => ({ ...prev, author: name.trim() }));
+      
+      // Complete authentication after name is saved
+      setIsAuthenticated(true);
+      sessionStorage.setItem('wki_authenticated', 'true');
     }
     setShowNamePrompt(false);
   };
@@ -780,35 +862,39 @@ const RepairOrderTracker = () => {
             <p className="text-gray-600">Work In Progress Tracker</p>
           </div>
           
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Access Code
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={passwordInput}
-                onChange={(e) => {
-                  setPasswordInput(e.target.value);
-                  setPasswordError('');
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                placeholder="Enter password"
-                autoFocus
-              />
-              {passwordError && (
-                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
-              )}
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
-            >
-              Access System
-            </button>
-          </form>
+          {!showNamePrompt ? (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Access Code
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setPasswordError('');
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                  placeholder="Enter password"
+                  autoFocus
+                />
+                {passwordError && (
+                  <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+                )}
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
+              >
+                Access System
+              </button>
+            </form>
+          ) : (
+            <NamePromptForm onSave={handleSaveDefaultAuthor} />
+          )}
         </div>
       </div>
     );
