@@ -263,7 +263,7 @@ const RepairOrderTracker = () => {
     const savedAuthor = localStorage.getItem('wki_default_author');
     
     if (savedName || savedAuthor) {
-      const name = savedName || savedAuthor;
+      const name = savedName || savedAuthor || '';
       setDefaultAuthor(name);
       setNewShiftNote(prev => ({ ...prev, author: name }));
     }
