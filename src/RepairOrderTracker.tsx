@@ -1080,7 +1080,7 @@ const RepairOrderTracker = () => {
   }
 
   return (
-    <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex flex-1 overflow-hidden">
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
@@ -1264,9 +1264,9 @@ const RepairOrderTracker = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className={`border-b p-4 shadow-md ${isDarkMode ? 'bg-gradient-to-r from-gray-900 to-gray-800 border-gray-700' : 'bg-gradient-to-r from-white to-gray-50 border-gray-200'}`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 lg:gap-4 flex-1">
+        <div className={`border-b p-3 md:p-4 shadow-md ${isDarkMode ? 'bg-gradient-to-r from-gray-900 to-gray-800 border-gray-700' : 'bg-gradient-to-r from-white to-gray-50 border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+            <div className="flex items-center gap-2 lg:gap-4 flex-1 min-w-0">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -1275,7 +1275,7 @@ const RepairOrderTracker = () => {
                 <Menu size={24} />
               </button>
               
-              <h2 className={`text-lg lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent'} truncate`}>
+              <h2 className={`text-base md:text-lg lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent'} truncate`}>
                 {activeView === 'current' ? '🔧 Current Work In Progress' : 
                  activeView === 'history' ? '📊 Recent Activity (Last 72 Hours)' : 
                  activeView}
@@ -1374,22 +1374,22 @@ const RepairOrderTracker = () => {
             </div>
             
             {activeView === 'current' && (
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 md:gap-2 flex-shrink-0">
                 <button
                   onClick={() => {
                     setShowShiftNotesModal(true);
                     setShiftNotesView('today');
                   }}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 text-sm font-medium"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2.5 sm:px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 text-xs sm:text-sm font-medium"
                 >
-                  <FileText size={18} />
+                  <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
                   <span className="hidden sm:inline">Shift Notes</span>
                 </button>
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-blue-500/50 hover:scale-105 text-sm font-medium"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2.5 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-lg hover:shadow-xl hover:shadow-blue-500/50 hover:scale-105 text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  <Plus size={18} />
+                  <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
                   <span className="hidden sm:inline">New RO</span>
                   <span className="sm:hidden">New</span>
                 </button>
@@ -2179,9 +2179,9 @@ const RepairOrderTracker = () => {
 
       {/* View/Edit Order Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-          <div className={`rounded-lg w-full max-w-4xl my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`sticky top-0 border-b p-3 sm:p-4 flex items-start sm:items-center justify-between gap-2 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} z-10`}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
+          <div className={`rounded-lg w-full max-w-4xl my-2 sm:my-8 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`sticky top-0 border-b p-3 sm:p-4 flex items-center justify-between gap-2 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} z-10`}>
               <div className="flex-1 min-w-0">
                 <h3 className={`text-base sm:text-xl font-bold truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   R.O. #{selectedOrder.ro} - {selectedOrder.customer}
