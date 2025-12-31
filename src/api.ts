@@ -1,6 +1,7 @@
 // API Service for WKI-WIP
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// Order interface with all repair order fields
 export interface Order {
   _id?: string;
   id?: number;
