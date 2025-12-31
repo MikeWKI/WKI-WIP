@@ -825,7 +825,7 @@ const RepairOrderTracker = () => {
     
     // Store original value on first keystroke
     if (!originalValues.current[logKey] && orderToUpdate) {
-      originalValues.current[logKey] = orderToUpdate[field] || '';
+      originalValues.current[logKey] = String(orderToUpdate[field] || '');
     }
     
     // Optimistic update - update UI immediately
