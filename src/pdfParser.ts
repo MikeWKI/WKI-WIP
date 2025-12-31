@@ -6,6 +6,7 @@ export interface ParsedPDFData {
   unit: string;
   ro: string;
   bay: string;
+  decisivCase: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;
@@ -61,6 +62,7 @@ function parseDecisivText(text: string): ParsedPDFData {
     unit: '',
     ro: '',
     bay: '',
+    decisivCase: '',
     firstShift: '',
     secondShift: '',
     orderedParts: '',
@@ -77,6 +79,12 @@ function parseDecisivText(text: string): ParsedPDFData {
   const customerMatch = text.match(/Customer:\s*([^\n]+?)(?:\s+Date:|$)/i);
   if (customerMatch) {
     data.customer = customerMatch[1].trim();
+  }
+  
+  // Extract Case Number
+  const caseMatch = text.match(/Case\s*#\s*(\d+)/i);
+  if (caseMatch) {
+    data.decisivCase = caseMatch[1].trim();
   }
   
   // Extract Unit Number

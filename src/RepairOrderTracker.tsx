@@ -620,6 +620,7 @@ const RepairOrderTracker = () => {
     unit: '',
     ro: '',
     bay: '',
+    decisivCase: '',
     firstShift: '',
     secondShift: '',
     orderedParts: '',
@@ -1799,6 +1800,19 @@ const RepairOrderTracker = () => {
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>R.O.#</span>
                     <p className={`font-semibold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.ro}</p>
                   </div>
+                  {order.decisivCase && (
+                    <div>
+                      <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Case #</span>
+                      <a 
+                        href={`https://paccarpg.decisiv.net/estimates/${order.decisivCase}/edit`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`font-semibold text-sm sm:text-base text-blue-600 hover:text-blue-700 underline ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : ''}`}
+                      >
+                        {order.decisivCase}
+                      </a>
+                    </div>
+                  )}
                   <div>
                     <span className={`text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Bay</span>
                     <p className={`font-semibold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.bay}</p>
@@ -1987,6 +2001,20 @@ const RepairOrderTracker = () => {
                     type="text"
                     value={formData.ro}
                     onChange={(e) => setFormData({ ...formData, ro: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Decisiv Case # (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.decisivCase || ''}
+                    onChange={(e) => setFormData({ ...formData, decisivCase: e.target.value })}
+                    placeholder="19452026"
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                       isDarkMode 
                         ? 'bg-gray-700 border-gray-600 text-white' 
@@ -2256,6 +2284,31 @@ const RepairOrderTracker = () => {
                         : 'bg-white border-gray-300 text-gray-900'
                     } ${activeView !== 'current' ? 'cursor-not-allowed opacity-60' : ''}`}
                   />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Decisiv Case #</label>
+                  <input
+                    type="text"
+                    value={selectedOrder.decisivCase || ''}
+                    onChange={(e) => activeView === 'current' && selectedOrder.id && handleUpdateOrder(selectedOrder.id, 'decisivCase', e.target.value)}
+                    readOnly={activeView !== 'current'}
+                    placeholder="19452026"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } ${activeView !== 'current' ? 'cursor-not-allowed opacity-60' : ''}`}
+                  />
+                  {selectedOrder.decisivCase && (
+                    <a 
+                      href={`https://paccarpg.decisiv.net/estimates/${selectedOrder.decisivCase}/edit`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-700 underline mt-1 inline-block"
+                    >
+                      Open in Decisiv →
+                    </a>
+                  )}
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Bay #</label>
