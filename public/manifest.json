@@ -1,0 +1,17 @@
+{
+  "name": "WKI Service Department WIP Tracker",
+  "short_name": "WKI-WIP",
+  "description": "Work In Progress Tracker for WKI Service Department",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e3a8a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
