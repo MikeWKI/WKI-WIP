@@ -121,7 +121,7 @@ const RepairOrderTracker = () => {
   const [historyFilter, setHistoryFilter] = useState<{ userName?: string; entityType?: string; actionType?: string }>({});
   
   // Refs for debouncing history logging
-  const updateTimers = React.useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const updateTimers = React.useRef<{ [key: string]: number }>({});
   const originalValues = React.useRef<{ [key: string]: string }>({});
   
   // Password protection
@@ -821,7 +821,7 @@ const RepairOrderTracker = () => {
     const logKey = `${id}-${field}`;
     
     // Find the order being updated
-    const orderToUpdate = orders.find(order => order.id === orderId);
+    const orderToUpdate = orders.find(order => order.id?.toString() === id);
     
     // Store original value on first keystroke
     if (!originalValues.current[logKey] && orderToUpdate) {
