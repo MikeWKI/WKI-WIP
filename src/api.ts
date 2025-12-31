@@ -40,6 +40,19 @@ export interface ArchivedShiftNote extends ShiftNote {
   archiveDate: string;
 }
 
+export interface HistoryEntry {
+  _id?: string;
+  id?: string;
+  actionType: string; // 'create', 'update', 'delete', 'archive'
+  entityType: string; // 'order', 'shiftnote'
+  entityId: string;
+  entityName: string; // Customer name or RO number for quick reference
+  userName: string;
+  changes: any; // Object containing what changed
+  timestamp: string;
+  createdAt?: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -356,6 +369,70 @@ class ApiService {
       }));
     } catch (error) {
       console.error('Error fetching archived shift notes for date:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // HISTORY/AUDIT TRAIL METHODS
+  // ============================================
+
+  async getHistory(filters?: { userName?: string; entityType?: string; actionType?: string; limit?: number }): Promise<HistoryEntry[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.userName) params.append('userName', filters.userName);
+      if (filters?.entityType) params.append('entityType', filters.entityType);
+      if (filters?.actionType) params.append('actionType', filters.actionType);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+
+      const response = await fetch(`${this.baseUrl}/history?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch history');
+      }
+      const data = await response.json();
+      return data.map((entry: any) => ({
+        ...entry,
+        id: entry._id
+      }));
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      throw error;
+    }
+  }
+
+  async getEntityHistory(entityId: string): Promise<HistoryEntry[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/history/entity/${entityId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch entity history');
+      }
+      const data = await response.json();
+      return data.map((entry: any) => ({
+        ...entry,
+        id: entry._id
+      }));
+    } catch (error) {
+      console.error('Error fetching entity history:', error);
+      throw error;
+    }
+  }
+
+  async createHistoryEntry(entry: Omit<HistoryEntry, 'id' | '_id' | 'timestamp' | 'createdAt'>): Promise<HistoryEntry> {
+    try {
+      const response = await fetch(`${this.baseUrl}/history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(entry),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create history entry');
+      }
+      const data = await response.json();
+      return { ...data, id: data._id };
+    } catch (error) {
+      console.error('Error creating history entry:', error);
       throw error;
     }
   }

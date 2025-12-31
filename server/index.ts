@@ -105,6 +105,21 @@ const archivedShiftNotesSchema = new mongoose.Schema({
 
 const ArchivedShiftNotes = mongoose.model('ArchivedShiftNotes', archivedShiftNotesSchema);
 
+// History/Audit Trail Schema
+const historySchema = new mongoose.Schema({
+  actionType: { type: String, required: true }, // 'create', 'update', 'delete', 'archive'
+  entityType: { type: String, required: true }, // 'order', 'shiftnote'
+  entityId: { type: String, required: true }, // ID of the affected entity
+  entityName: { type: String, default: '' }, // Customer name or RO number for quick reference
+  userName: { type: String, required: true }, // Who made the change
+  changes: { type: mongoose.Schema.Types.Mixed, default: {} }, // What changed
+  timestamp: { type: Date, default: Date.now },
+}, {
+  timestamps: true
+});
+
+const History = mongoose.model('History', historySchema);
+
 // API Routes
 
 // Get all orders
@@ -440,6 +455,55 @@ app.get('/api/shift-notes/archived/:date', async (req: Request, res: Response) =
   } catch (error) {
     console.error('Error fetching archived shift notes for date:', error);
     res.status(500).json({ error: 'Failed to fetch archived shift notes' });
+  }
+});
+
+// ============================================
+// HISTORY/AUDIT TRAIL ENDPOINTS
+// ============================================
+
+// Get all history (with optional filters)
+app.get('/api/history', async (req: Request, res: Response) => {
+  try {
+    const { userName, entityType, actionType, limit = '100' } = req.query;
+    
+    const filter: any = {};
+    if (userName) filter.userName = userName;
+    if (entityType) filter.entityType = entityType;
+    if (actionType) filter.actionType = actionType;
+    
+    const history = await History.find(filter)
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit as string));
+    
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// Get history for specific entity
+app.get('/api/history/entity/:entityId', async (req: Request, res: Response) => {
+  try {
+    const history = await History.find({ entityId: req.params.entityId })
+      .sort({ timestamp: -1 });
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching entity history:', error);
+    res.status(500).json({ error: 'Failed to fetch entity history' });
+  }
+});
+
+// Create history entry
+app.post('/api/history', async (req: Request, res: Response) => {
+  try {
+    const historyEntry = new History(req.body);
+    const savedHistory = await historyEntry.save();
+    res.status(201).json(savedHistory);
+  } catch (error) {
+    console.error('Error creating history entry:', error);
+    res.status(500).json({ error: 'Failed to create history entry' });
   }
 });
 

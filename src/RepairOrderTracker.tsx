@@ -1,8 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Search, Plus, X, Archive, Home, Menu, FileText, Clock, ChevronDown, ChevronUp, Filter, Upload } from 'lucide-react';
+import { Search, Plus, X, Archive, Home, Menu, FileText, Clock, ChevronDown, ChevronUp, Filter, Upload, History } from 'lucide-react';
 import { archivedOrders } from './archivedData';
 import Footer from './Footer';
-import { apiService, ShiftNote, ArchivedShiftNote } from './api';
+import { apiService, ShiftNote, ArchivedShiftNote, HistoryEntry } from './api';
 import { parseDecisivPDF } from './pdfParser';
 
 // Type definitions
@@ -116,6 +116,10 @@ const RepairOrderTracker = () => {
   const [defaultAuthor, setDefaultAuthor] = useState<string>('');
   const [showNamePrompt, setShowNamePrompt] = useState<boolean>(false);
   
+  // History/Audit Trail
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<{ userName?: string; entityType?: string; actionType?: string }>({});
+  
   // Password protection
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>('');
@@ -157,6 +161,30 @@ const RepairOrderTracker = () => {
       });
     } catch (e) {
       return '';
+    }
+  };
+
+  // Helper function to log history/audit trail
+  const logHistory = async (
+    actionType: string,
+    entityType: string,
+    entityId: string,
+    entityName: string,
+    changes: any = {}
+  ) => {
+    try {
+      const userName = localStorage.getItem('wki_user_name') || defaultAuthor || 'Unknown User';
+      await apiService.createHistoryEntry({
+        actionType,
+        entityType,
+        entityId,
+        entityName,
+        userName,
+        changes
+      });
+    } catch (error) {
+      console.error('Failed to log history:', error);
+      // Don't block the main operation if history logging fails
     }
   };
 
@@ -246,6 +274,7 @@ const RepairOrderTracker = () => {
       loadShiftNotes();
       loadYesterdayShiftNotes();
       loadArchivedShiftNotes();
+      loadHistory();
       
       // Check if it's past 8pm and archive old notes automatically
       const now = new Date();
@@ -302,6 +331,15 @@ const RepairOrderTracker = () => {
       setArchivedShiftNotes(archived);
     } catch (err) {
       console.error('Failed to load archived shift notes:', err);
+    }
+  };
+
+  const loadHistory = async (filters?: { userName?: string; entityType?: string; actionType?: string }) => {
+    try {
+      const history = await apiService.getHistory({ ...filters, limit: 100 });
+      setHistoryEntries(history);
+    } catch (err) {
+      console.error('Failed to load history:', err);
     }
   };
 
@@ -704,6 +742,16 @@ const RepairOrderTracker = () => {
       setIsLoading(true);
       const newOrder = await apiService.createOrder(formData);
       setOrders([...orders, newOrder]);
+      
+      // Log history
+      await logHistory(
+        'create',
+        'order',
+        newOrder.id?.toString() || newOrder._id || '',
+        `${formData.customer} - R.O. #${formData.ro}`,
+        { order: formData }
+      );
+      
       setFormData({
         customer: '',
         unit: '',
@@ -765,6 +813,10 @@ const RepairOrderTracker = () => {
   };
 
   const handleUpdateOrder = async (orderId: string | number, field: keyof Order, value: string) => {
+    // Find the order being updated to capture old value
+    const orderToUpdate = orders.find(order => order.id === orderId);
+    const oldValue = orderToUpdate ? orderToUpdate[field] : '';
+    
     // Optimistic update - update UI immediately
     setOrders(orders.map((order: Order) =>
       order.id === orderId ? { ...order, [field]: value } : order
@@ -777,6 +829,17 @@ const RepairOrderTracker = () => {
     try {
       const id = orderId.toString();
       await apiService.updateOrder(id, { [field]: value });
+      
+      // Log history if value actually changed
+      if (orderToUpdate && oldValue !== value) {
+        await logHistory(
+          'update',
+          'order',
+          id,
+          `${orderToUpdate.customer} - R.O. #${orderToUpdate.ro}`,
+          { field, oldValue, newValue: value }
+        );
+      }
     } catch (err) {
       console.error('Failed to update order:', err);
       // Reload orders to restore correct state if update failed
@@ -785,6 +848,9 @@ const RepairOrderTracker = () => {
   };
 
   const handleDeleteOrder = async (orderId: string | number) => {
+    // Find the order being deleted for logging
+    const orderToDelete = orders.find(order => order.id === orderId);
+    
     // Prompt for PIN
     const pin = prompt('Enter PIN to delete this order:');
     
@@ -803,6 +869,18 @@ const RepairOrderTracker = () => {
       await apiService.deleteOrder(id);
       setOrders(orders.filter((order: Order) => order.id !== orderId));
       setSelectedOrder(null);
+      
+      // Log history
+      if (orderToDelete) {
+        await logHistory(
+          'delete',
+          'order',
+          id,
+          `${orderToDelete.customer} - R.O. #${orderToDelete.ro}`,
+          { deletedOrder: orderToDelete }
+        );
+      }
+      
       alert('Order deleted successfully.');
     } catch (err) {
       console.error('Failed to delete order:', err);
@@ -813,6 +891,9 @@ const RepairOrderTracker = () => {
   };
 
   const handleArchiveOrder = async (orderId: string | number) => {
+    // Find the order being archived for logging
+    const orderToArchive = orders.find(order => order.id === orderId);
+    
     if (!confirm('Mark this order as completed and move to archives?')) {
       return;
     }
@@ -829,6 +910,17 @@ const RepairOrderTracker = () => {
       
       // Reload archives to show the new archived order
       await loadArchives();
+      
+      // Log history
+      if (orderToArchive) {
+        await logHistory(
+          'archive',
+          'order',
+          id,
+          `${orderToArchive.customer} - R.O. #${orderToArchive.ro}`,
+          { archiveMonth: result.archiveMonth }
+        );
+      }
       
       // Close detail view if this order was selected
       if (selectedOrder && selectedOrder.id === orderId) {
@@ -1412,7 +1504,113 @@ const RepairOrderTracker = () => {
             </div>
           )}
           
-          {isLoading ? (
+          {/* History View */}
+          {activeView === 'history' ? (
+            <div className="space-y-4">
+              {/* History Filters */}
+              <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <h3 className={`text-sm font-semibold mb-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Filter History
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <select
+                    value={historyFilter.actionType || ''}
+                    onChange={(e) => {
+                      setHistoryFilter({ ...historyFilter, actionType: e.target.value || undefined });
+                      loadHistory({ ...historyFilter, actionType: e.target.value || undefined });
+                    }}
+                    className={`px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-white border-gray-300 text-gray-900'}`}
+                  >
+                    <option value="">All Actions</option>
+                    <option value="create">Created</option>
+                    <option value="update">Updated</option>
+                    <option value="delete">Deleted</option>
+                    <option value="archive">Archived</option>
+                  </select>
+                  <select
+                    value={historyFilter.entityType || ''}
+                    onChange={(e) => {
+                      setHistoryFilter({ ...historyFilter, entityType: e.target.value || undefined });
+                      loadHistory({ ...historyFilter, entityType: e.target.value || undefined });
+                    }}
+                    className={`px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-white border-gray-300 text-gray-900'}`}
+                  >
+                    <option value="">All Types</option>
+                    <option value="order">Orders</option>
+                    <option value="shiftnote">Shift Notes</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      setHistoryFilter({});
+                      loadHistory();
+                    }}
+                    className={`px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+
+              {/* History Timeline */}
+              <div className="space-y-2">
+                {historyEntries.map((entry) => {
+                  const actionColor = {
+                    create: isDarkMode ? 'text-green-400' : 'text-green-600',
+                    update: isDarkMode ? 'text-blue-400' : 'text-blue-600',
+                    delete: isDarkMode ? 'text-red-400' : 'text-red-600',
+                    archive: isDarkMode ? 'text-purple-400' : 'text-purple-600',
+                  }[entry.actionType] || (isDarkMode ? 'text-gray-400' : 'text-gray-600');
+
+                  const actionBg = {
+                    create: isDarkMode ? 'bg-green-900' : 'bg-green-50',
+                    update: isDarkMode ? 'bg-blue-900' : 'bg-blue-50',
+                    delete: isDarkMode ? 'bg-red-900' : 'bg-red-50',
+                    archive: isDarkMode ? 'bg-purple-900' : 'bg-purple-50',
+                  }[entry.actionType] || (isDarkMode ? 'bg-gray-900' : 'bg-gray-50');
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`border rounded-xl p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${actionBg} ${actionColor}`}>
+                              {entry.actionType.toUpperCase()}
+                            </span>
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              {entry.entityType}
+                            </span>
+                          </div>
+                          <div className={`font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                            {entry.entityName}
+                          </div>
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            by <span className="font-medium">{entry.userName}</span>
+                          </div>
+                          {entry.changes && entry.actionType === 'update' && entry.changes.field && (
+                            <div className={`mt-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                              Updated <span className="font-mono">{entry.changes.field}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={`text-xs text-right ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                          {formatTimestamp(entry.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {historyEntries.length === 0 && (
+                  <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <History size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>No history entries found</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className={`inline-block animate-spin rounded-full h-12 w-12 border-b-2 ${
