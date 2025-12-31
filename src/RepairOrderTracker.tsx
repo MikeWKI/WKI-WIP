@@ -136,6 +136,11 @@ const RepairOrderTracker = () => {
   const [showFilters, setShowFilters] = useState<boolean>(false); // Collapsible filters
   const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
 
+  // Idle screen state
+  const [showIdleScreen, setShowIdleScreen] = useState<boolean>(false);
+  const idleTimerRef = React.useRef<number | null>(null);
+  const IDLE_TIMEOUT = 120000; // 2 minutes in milliseconds
+
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
     if (!timestamp) return '';
@@ -287,6 +292,48 @@ const RepairOrderTracker = () => {
       }
     }
   }, [isAuthenticated]);
+
+  // Idle screen timer logic
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const resetIdleTimer = () => {
+      // Clear existing timer
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+      
+      // Hide idle screen if showing
+      if (showIdleScreen) {
+        setShowIdleScreen(false);
+      }
+      
+      // Set new timer
+      idleTimerRef.current = window.setTimeout(() => {
+        setShowIdleScreen(true);
+      }, IDLE_TIMEOUT);
+    };
+
+    // Reset timer on user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetIdleTimer);
+    });
+
+    // Initial timer
+    resetIdleTimer();
+
+    // Cleanup
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetIdleTimer);
+      });
+    };
+  }, [isAuthenticated, showIdleScreen]);
 
   const loadOrders = async () => {
     try {
@@ -2751,6 +2798,21 @@ const RepairOrderTracker = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Idle Screen Overlay */}
+      {showIdleScreen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          onClick={() => setShowIdleScreen(false)}
+          onMouseMove={() => setShowIdleScreen(false)}
+        >
+          <img 
+            src="/idle.png" 
+            alt="Idle Screen" 
+            className="max-w-full max-h-full object-contain"
+          />
         </div>
       )}
     </div>
