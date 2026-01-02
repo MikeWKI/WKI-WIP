@@ -11,6 +11,8 @@ export interface Order {
   bay: string;
   decisivCase?: string;
   status?: string;
+  triageStartTime?: string;
+  dwellStartTime?: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;

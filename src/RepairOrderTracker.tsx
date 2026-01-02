@@ -15,6 +15,8 @@ interface Order {
   bay: string;
   decisivCase?: string;
   status?: string;
+  triageStartTime?: string;
+  dwellStartTime?: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;
@@ -96,6 +98,45 @@ const NamePromptForm: React.FC<{ onSave: (name: string) => void }> = ({ onSave }
     </form>
   );
 };
+
+// Timer calculation helpers
+const calculateTimerStatus = (startTime: string | undefined, thresholdMs: number): {
+  elapsed: number;
+  isOverdue: boolean;
+  remaining: number;
+  formattedTime: string;
+} => {
+  if (!startTime) {
+    return { elapsed: 0, isOverdue: false, remaining: thresholdMs, formattedTime: '' };
+  }
+  
+  const now = Date.now();
+  const start = new Date(startTime).getTime();
+  const elapsed = now - start;
+  const remaining = thresholdMs - elapsed;
+  const isOverdue = remaining < 0;
+  
+  // Format time remaining or overdue
+  const absRemaining = Math.abs(remaining);
+  const hours = Math.floor(absRemaining / (1000 * 60 * 60));
+  const minutes = Math.floor((absRemaining % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  
+  let formattedTime = '';
+  if (days > 0) {
+    formattedTime = `${days}d ${remainingHours}h`;
+  } else if (hours > 0) {
+    formattedTime = `${hours}h ${minutes}m`;
+  } else {
+    formattedTime = `${minutes}m`;
+  }
+  
+  return { elapsed, isOverdue, remaining, formattedTime };
+};
+
+const TRIAGE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+const DWELL_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
 const RepairOrderTracker = () => {
   const [activeView, setActiveView] = useState<string>('current');
@@ -335,6 +376,16 @@ const RepairOrderTracker = () => {
       });
     };
   }, [isAuthenticated]);
+
+  // Timer update effect - force re-render every minute to update countdown timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force component re-render to update timer displays
+      setOrders(prevOrders => [...prevOrders]);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const loadOrders = async () => {
     try {
@@ -1022,6 +1073,73 @@ const RepairOrderTracker = () => {
     } catch (err) {
       console.error('Failed to archive order:', err);
       alert('Failed to archive order. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Timer toggle handlers
+  const handleToggleTimer = async (orderId: string | number, timerType: 'triage' | 'dwell') => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const field = timerType === 'triage' ? 'triageStartTime' : 'dwellStartTime';
+    const currentValue = order[field];
+    
+    // If timer is already running, stop it
+    if (currentValue) {
+      if (confirm(`Stop ${timerType} timer?`)) {
+        try {
+          setIsLoading(true);
+          await apiService.updateOrder(orderId.toString(), { [field]: '' });
+          await loadOrders();
+          
+          // Log history
+          await logHistory(
+            'update',
+            'order',
+            orderId.toString(),
+            `${order.customer} - R.O. #${order.ro}`,
+            { field, oldValue: currentValue, newValue: '' }
+          );
+        } catch (err) {
+          console.error(`Failed to stop ${timerType} timer:`, err);
+          alert(`Failed to stop ${timerType} timer`);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      return;
+    }
+    
+    // Start timer - prompt for time
+    const defaultTime = new Date().toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    const userTime = prompt(
+      `Enter start time for ${timerType} timer (or leave as-is for current time):`,
+      defaultTime
+    );
+    
+    if (userTime === null) return; // User cancelled
+    
+    // Convert to ISO string
+    const startTime = userTime ? new Date(userTime).toISOString() : new Date().toISOString();
+    
+    try {
+      setIsLoading(true);
+      await apiService.updateOrder(orderId.toString(), { [field]: startTime });
+      await loadOrders();
+      
+      // Log history
+      await logHistory(
+        'update',
+        'order',
+        orderId.toString(),
+        `${order.customer} - R.O. #${order.ro}`,
+        { field, oldValue: '', newValue: startTime }
+      );
+    } catch (err) {
+      console.error(`Failed to start ${timerType} timer:`, err);
+      alert(`Failed to start ${timerType} timer`);
     } finally {
       setIsLoading(false);
     }
@@ -1737,38 +1855,61 @@ const RepairOrderTracker = () => {
             {filteredOrders.map((order: Order) => {
               const orderSource = globalSearch ? getOrderSource(order) : null;
               
-              // Determine card background based on status
+              // Calculate timer status
+              const triageStatus = calculateTimerStatus(order.triageStartTime, TRIAGE_THRESHOLD_MS);
+              const dwellStatus = calculateTimerStatus(order.dwellStartTime, DWELL_THRESHOLD_MS);
+              
+              // Determine if any timer is overdue
+              const hasOverdueTimer = triageStatus.isOverdue || dwellStatus.isOverdue;
+              
+              // Determine card background and border based on status and timers
               let cardBgClass = '';
               let cardBorderClass = '';
               let cardHoverClass = '';
               
+              // Timer border takes precedence over status colors
+              if (hasOverdueTimer) {
+                // Red border for overdue timers
+                cardBorderClass = 'border-red-500 border-2';
+              } else if (order.triageStartTime && !triageStatus.isOverdue) {
+                // Blue border for active triage timer
+                cardBorderClass = 'border-blue-500 border-2';
+              } else if (order.dwellStartTime && !dwellStatus.isOverdue) {
+                // Green border for active dwell timer
+                cardBorderClass = 'border-green-500 border-2';
+              } else if (order.status === 'customer-waiting') {
+                // Orange border for Customer Waiting status
+                cardBorderClass = isDarkMode ? 'border-orange-700' : 'border-orange-300';
+              } else if (order.status === 'waiting-parts') {
+                // Blue border for Waiting on Parts status
+                cardBorderClass = isDarkMode ? 'border-blue-700' : 'border-blue-300';
+              } else {
+                // Default border
+                cardBorderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
+              }
+              
+              // Background colors based on status (not affected by timers)
               if (order.status === 'customer-waiting') {
-                // Orange for Customer Waiting
                 cardBgClass = isDarkMode 
                   ? 'bg-gradient-to-br from-orange-900/40 to-orange-800/30' 
                   : 'bg-gradient-to-br from-orange-50 to-orange-100/50';
-                cardBorderClass = isDarkMode ? 'border-orange-700' : 'border-orange-300';
                 cardHoverClass = isDarkMode 
-                  ? 'hover:from-orange-800/50 hover:to-orange-700/40 hover:border-orange-600 hover:shadow-2xl hover:shadow-orange-900/20' 
-                  : 'hover:shadow-xl hover:shadow-orange-200 hover:border-orange-400';
+                  ? 'hover:from-orange-800/50 hover:to-orange-700/40 hover:shadow-2xl hover:shadow-orange-900/20' 
+                  : 'hover:shadow-xl hover:shadow-orange-200';
               } else if (order.status === 'waiting-parts') {
-                // Blue for Waiting on Parts
                 cardBgClass = isDarkMode 
                   ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/30' 
                   : 'bg-gradient-to-br from-blue-50 to-blue-100/50';
-                cardBorderClass = isDarkMode ? 'border-blue-700' : 'border-blue-300';
                 cardHoverClass = isDarkMode 
-                  ? 'hover:from-blue-800/50 hover:to-blue-700/40 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20' 
-                  : 'hover:shadow-xl hover:shadow-blue-200 hover:border-blue-400';
+                  ? 'hover:from-blue-800/50 hover:to-blue-700/40 hover:shadow-2xl hover:shadow-blue-900/20' 
+                  : 'hover:shadow-xl hover:shadow-blue-200';
               } else {
-                // Default - Active
                 cardBgClass = isDarkMode 
                   ? 'bg-gradient-to-br from-gray-800 to-gray-850' 
                   : 'bg-white';
-                cardBorderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
                 cardHoverClass = isDarkMode 
-                  ? 'hover:from-gray-750 hover:to-gray-800 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20' 
-                  : 'hover:shadow-xl hover:shadow-blue-100 hover:border-blue-300';
+                  ? 'hover:from-gray-750 hover:to-gray-800 hover:shadow-2xl hover:shadow-blue-900/20' 
+                  : 'hover:shadow-xl hover:shadow-blue-100';
               }
               
               return (
@@ -1914,6 +2055,49 @@ const RepairOrderTracker = () => {
                     <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{order.accountStatus}</p>
                   </div>
                 </div>
+
+                {/* Timer Toggles - only show for current orders */}
+                {activeView === 'current' && !globalSearch && order.id && (
+                  <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-wrap gap-2`}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTimer(order.id!, 'triage');
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        order.triageStartTime
+                          ? triageStatus.isOverdue
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : isDarkMode
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <Clock size={14} />
+                      <span>Triage {order.triageStartTime ? (triageStatus.isOverdue ? 'OVERDUE' : triageStatus.formattedTime) : 'Start'}</span>
+                    </button>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTimer(order.id!, 'dwell');
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        order.dwellStartTime
+                          ? dwellStatus.isOverdue
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                          : isDarkMode
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <Clock size={14} />
+                      <span>Dwell {order.dwellStartTime ? (dwellStatus.isOverdue ? 'OVERDUE' : dwellStatus.formattedTime) : 'Start'}</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Mark as Completed button - only show for current orders */}
                 {activeView === 'current' && !globalSearch && order.id && (
