@@ -279,6 +279,15 @@ const RepairOrderTracker = () => {
     localStorage.setItem('darkMode', isDarkMode.toString());
   }, [isDarkMode]);
 
+  // Update theme-color meta tag for PWA based on dark mode
+  useEffect(() => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      // Dark mode: dark gray (#111827), Light mode: blue (#1e3a8a)
+      metaThemeColor.setAttribute('content', isDarkMode ? '#111827' : '#1e3a8a');
+    }
+  }, [isDarkMode]);
+
   // Calculate statistics
   const getStatistics = () => {
     const now = new Date().getTime();
