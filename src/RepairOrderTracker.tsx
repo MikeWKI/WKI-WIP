@@ -2166,7 +2166,7 @@ const RepairOrderTracker = () => {
                   </div>
                 )}
                 {/* Status Badge - Upper Right */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
                     order.status === 'customer-waiting'
                       ? isDarkMode
@@ -2190,7 +2190,7 @@ const RepairOrderTracker = () => {
                   </span>
                 </div>
                 {/* Date Information Bar */}
-                <div className={`flex flex-wrap items-center gap-4 mb-3 pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className={`flex flex-wrap items-center gap-4 mb-3 pb-3 border-b pt-8 sm:pt-0 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                   {order.dateAdded && (
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created:</span>
