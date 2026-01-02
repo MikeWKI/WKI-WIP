@@ -178,6 +178,8 @@ const RepairOrderTracker = () => {
   const [timeFilter, setTimeFilter] = useState<number>(0); // 0 = all, or minutes
   const [showFilters, setShowFilters] = useState<boolean>(false); // Collapsible filters
   const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
+  const [filterInTriage, setFilterInTriage] = useState<boolean>(false); // Filter for active triage timers
+  const [filterDwellRunning, setFilterDwellRunning] = useState<boolean>(false); // Filter for active dwell timers
 
   // Idle screen state
   const [showIdleScreen, setShowIdleScreen] = useState<boolean>(false);
@@ -826,6 +828,25 @@ const RepairOrderTracker = () => {
         
         return mostRecent > 0 && (now - mostRecent) <= filterMs;
       });
+    }
+
+    // Apply timer filters (for current view only)
+    if (activeView === 'current') {
+      if (filterInTriage) {
+        orders = orders.filter((order: Order) => {
+          if (!order.triageStartTime) return false;
+          const triageStatus = calculateTimerStatus(order.triageStartTime, TRIAGE_THRESHOLD_MS);
+          return !triageStatus.isOverdue; // Only show active (not overdue) triage timers
+        });
+      }
+      
+      if (filterDwellRunning) {
+        orders = orders.filter((order: Order) => {
+          if (!order.dwellStartTime) return false;
+          const dwellStatus = calculateTimerStatus(order.dwellStartTime, DWELL_THRESHOLD_MS);
+          return !dwellStatus.isOverdue; // Only show active (not overdue) dwell timers
+        });
+      }
     }
 
     // Apply sorting (for current and history views)
@@ -1672,7 +1693,7 @@ const RepairOrderTracker = () => {
               </div>
             )}
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1688,6 +1709,39 @@ const RepairOrderTracker = () => {
                 <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
                   {filteredOrders.length} results across all months
                 </span>
+              )}
+              
+              {/* Timer Filter Toggles */}
+              {activeView === 'current' && (
+                <>
+                  <button
+                    onClick={() => setFilterInTriage(!filterInTriage)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      filterInTriage
+                        ? 'bg-blue-600 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Clock size={14} />
+                    In Triage
+                  </button>
+                  
+                  <button
+                    onClick={() => setFilterDwellRunning(!filterDwellRunning)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      filterDwellRunning
+                        ? 'bg-green-600 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Clock size={14} />
+                    Dwell Running
+                  </button>
+                </>
               )}
             </div>
           </div>
