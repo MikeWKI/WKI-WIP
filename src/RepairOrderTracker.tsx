@@ -1406,6 +1406,83 @@ const RepairOrderTracker = () => {
             );
           })}
         </nav>
+        
+        {/* Quick Links Section */}
+        <div className={`mt-auto p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h3 className={`text-xs font-semibold uppercase mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Quick Links
+          </h3>
+          <div className="space-y-2">
+            <a
+              href="https://wki-sma.onrender.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-3 p-2 rounded-lg transition-smooth ${
+                isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+              }`}
+            >
+              <img 
+                src="/sma.png" 
+                alt="SMA"
+                className="w-10 h-10 object-contain rounded"
+              />
+              <div className="flex-1">
+                <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  Service Management
+                </div>
+                <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  SMA Portal
+                </div>
+              </div>
+            </a>
+            
+            <a
+              href="https://wki-dnt.onrender.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-3 p-2 rounded-lg transition-smooth ${
+                isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+              }`}
+            >
+              <img 
+                src="/casenote.png" 
+                alt="Case Note"
+                className="w-10 h-10 object-contain rounded"
+              />
+              <div className="flex-1">
+                <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  Case Notation
+                </div>
+                <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Documentation Tool
+                </div>
+              </div>
+            </a>
+            
+            <a
+              href="https://paccarpg.decisiv.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-3 p-2 rounded-lg transition-smooth ${
+                isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+              }`}
+            >
+              <img 
+                src="/decisiv.png" 
+                alt="Decisiv"
+                className="w-10 h-10 object-contain rounded"
+              />
+              <div className="flex-1">
+                <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  Decisiv Platform
+                </div>
+                <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Case Management
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
         </div>
 
         {/* Main Content */}
