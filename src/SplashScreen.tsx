@@ -41,20 +41,32 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 flex items-center justify-start transition-opacity duration-500 ${
         fadeOut ? 'opacity-0' : 'opacity-100'
       }`}
       style={{
-        backgroundImage: 'url(/Splash.png)',
-        backgroundSize: 'contain',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
         backgroundColor: '#000'
       }}
     >
-      <div className="absolute inset-0 bg-black bg-opacity-40" />
+      {/* Background image positioned to the right with gradient fades */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'url(/Splash.png)',
+          backgroundSize: '70%',
+          backgroundPosition: 'right center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Left gradient fade */}
+        <div className="absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-r from-black via-black to-transparent pointer-events-none"></div>
+        {/* Right gradient fade */}
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none"></div>
+      </div>
       
-      <div className="relative z-10 text-center">
+      <div className="absolute inset-0 bg-black bg-opacity-30" />
+      
+      <div className="relative z-10 text-center ml-8 md:ml-16 lg:ml-24">
         {/* Kenworth Logo */}
         <div className="mb-8 flex justify-center">
           <img 
