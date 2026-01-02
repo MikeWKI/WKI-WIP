@@ -188,6 +188,10 @@ const RepairOrderTracker = () => {
   const idleTimerRef = React.useRef<number | null>(null);
   const IDLE_TIMEOUT = 120000; // 2 minutes in milliseconds
 
+  // PWA install prompt state
+  const [showPWAPrompt, setShowPWAPrompt] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   // Helper function to format timestamps
   const formatTimestamp = (timestamp?: string): string => {
     if (!timestamp) return '';
@@ -379,6 +383,51 @@ const RepairOrderTracker = () => {
       });
     };
   }, [isAuthenticated]);
+
+  // PWA install prompt listener
+  useEffect(() => {
+    // Check if user has permanently dismissed the prompt
+    const dismissed = localStorage.getItem('pwa_prompt_dismissed');
+    if (dismissed === 'true') return;
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      setDeferredPrompt(e);
+      // Show our custom install prompt
+      setShowPWAPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Handle PWA install
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) return;
+
+    // Show the install prompt
+    deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    console.log(`User response to the install prompt: ${outcome}`);
+
+    // Clear the deferredPrompt
+    setDeferredPrompt(null);
+    setShowPWAPrompt(false);
+  };
+
+  // Handle permanent dismissal of PWA prompt
+  const handleDismissPWAPrompt = () => {
+    localStorage.setItem('pwa_prompt_dismissed', 'true');
+    setShowPWAPrompt(false);
+  };
 
   // Timer update effect - force re-render every minute to update countdown timers
   const [_timerTick, setTimerTick] = useState(0);
@@ -3401,6 +3450,98 @@ const RepairOrderTracker = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PWA Install Prompt */}
+      {showPWAPrompt && (
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-[90] animate-slide-up">
+          <div className={`rounded-lg shadow-2xl border-2 overflow-hidden ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-blue-900 to-blue-800 border-blue-600' 
+              : 'bg-gradient-to-br from-blue-50 to-white border-blue-300'
+          }`}>
+            {/* Header with icon */}
+            <div className={`flex items-center gap-3 px-4 py-3 border-b ${
+              isDarkMode ? 'border-blue-700' : 'border-blue-200'
+            }`}>
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Install WKI RO Tracker
+                </h3>
+                <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-gray-600'}`}>
+                  App available for installation
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPWAPrompt(false)}
+                className={`p-1 rounded-lg transition-colors ${
+                  isDarkMode 
+                    ? 'hover:bg-blue-800 text-blue-300' 
+                    : 'hover:bg-blue-100 text-gray-500'
+                }`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-4 py-3">
+              <p className={`text-sm mb-4 ${isDarkMode ? 'text-blue-100' : 'text-gray-700'}`}>
+                Install this app on your device for quick access, offline capability, and a native app experience.
+              </p>
+
+              {/* Benefits list */}
+              <ul className={`text-xs space-y-1.5 mb-4 ${isDarkMode ? 'text-blue-200' : 'text-gray-600'}`}>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Quick access from home screen
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Works offline
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Native app experience
+                </li>
+              </ul>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleInstallPWA}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Install
+                </button>
+                <button
+                  onClick={handleDismissPWAPrompt}
+                  className={`px-4 py-2.5 rounded-lg font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'bg-blue-800 text-blue-200 hover:bg-blue-700' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Don't Show Again
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
