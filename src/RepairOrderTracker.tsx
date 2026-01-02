@@ -116,16 +116,15 @@ const calculateTimerStatus = (startTime: string | undefined, thresholdMs: number
   const remaining = thresholdMs - elapsed;
   const isOverdue = remaining < 0;
   
-  // Format time remaining or overdue
-  const absRemaining = Math.abs(remaining);
-  const hours = Math.floor(absRemaining / (1000 * 60 * 60));
-  const minutes = Math.floor((absRemaining % (1000 * 60 * 60)) / (1000 * 60));
+  // Format elapsed time (not remaining)
+  const hours = Math.floor(elapsed / (1000 * 60 * 60));
+  const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
   const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
+  const elapsedHours = hours % 24;
   
   let formattedTime = '';
   if (days > 0) {
-    formattedTime = `${days}d ${remainingHours}h`;
+    formattedTime = `${days}d ${elapsedHours}h`;
   } else if (hours > 0) {
     formattedTime = `${hours}h ${minutes}m`;
   } else {
@@ -1885,6 +1884,9 @@ const RepairOrderTracker = () => {
               } else if (order.status === 'waiting-parts') {
                 // Blue border for Waiting on Parts status
                 cardBorderClass = isDarkMode ? 'border-blue-700' : 'border-blue-300';
+              } else if (order.status === 'waiting-approval') {
+                // Purple border for Waiting on Approval status
+                cardBorderClass = isDarkMode ? 'border-purple-700' : 'border-purple-300';
               } else {
                 // Default border
                 cardBorderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
@@ -1905,6 +1907,13 @@ const RepairOrderTracker = () => {
                 cardHoverClass = isDarkMode 
                   ? 'hover:from-blue-800/50 hover:to-blue-700/40 hover:shadow-2xl hover:shadow-blue-900/20' 
                   : 'hover:shadow-xl hover:shadow-blue-200';
+              } else if (order.status === 'waiting-approval') {
+                cardBgClass = isDarkMode 
+                  ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/30' 
+                  : 'bg-gradient-to-br from-purple-50 to-purple-100/50';
+                cardHoverClass = isDarkMode 
+                  ? 'hover:from-purple-800/50 hover:to-purple-700/40 hover:shadow-2xl hover:shadow-purple-900/20' 
+                  : 'hover:shadow-xl hover:shadow-purple-200';
               } else {
                 cardBgClass = isDarkMode 
                   ? 'bg-gradient-to-br from-gray-800 to-gray-850' 
@@ -2256,6 +2265,7 @@ const RepairOrderTracker = () => {
                     <option value="">Active</option>
                     <option value="customer-waiting">Customer Waiting</option>
                     <option value="waiting-parts">Waiting on Parts</option>
+                    <option value="waiting-approval">Waiting on Approval</option>
                   </select>
                 </div>
                 <div>
@@ -2561,6 +2571,7 @@ const RepairOrderTracker = () => {
                     <option value="">Active</option>
                     <option value="customer-waiting">Customer Waiting</option>
                     <option value="waiting-parts">Waiting on Parts</option>
+                    <option value="waiting-approval">Waiting on Approval</option>
                   </select>
                 </div>
                 <div>
