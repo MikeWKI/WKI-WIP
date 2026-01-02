@@ -42,11 +42,32 @@ export async function parseDecisivPDF(file: File): Promise<ParsedPDFData | null>
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
+      
+      // Build text with proper line breaks based on Y position
+      let lastY = -1;
       const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
+        .map((item: any) => {
+          const y = item.transform[5]; // Y position
+          const str = item.str;
+          
+          // If Y position changed significantly, add newline
+          if (lastY !== -1 && Math.abs(y - lastY) > 2) {
+            lastY = y;
+            return '\n' + str;
+          }
+          
+          lastY = y;
+          return ' ' + str;
+        })
+        .join('');
+      
       fullText += pageText + '\n';
     }
+    
+    // Log extracted text for debugging
+    console.log('=== EXTRACTED PDF TEXT ===');
+    console.log(fullText.substring(0, 500));
+    console.log('=== END PREVIEW ===');
     
     // Parse the extracted text
     return parseDecisivText(fullText);
@@ -75,41 +96,65 @@ function parseDecisivText(text: string): ParsedPDFData {
     call: ''
   };
   
-  // Extract Customer
-  const customerMatch = text.match(/Customer:\s*([^\n]+?)(?:\s+Date:|$)/i);
-  if (customerMatch) {
-    data.customer = customerMatch[1].trim();
-  }
+  // Log for debugging
+  console.log('=== PARSING PDF TEXT ===');
   
-  // Extract Case Number
+  // Extract Case Number - look for "Case #" followed by digits
   const caseMatch = text.match(/Case\s*#\s*(\d+)/i);
   if (caseMatch) {
     data.decisivCase = caseMatch[1].trim();
+    console.log('✓ Case Number:', data.decisivCase);
+  } else {
+    console.log('✗ Case Number: NOT FOUND');
+  }
+  
+  // Extract Customer - more flexible pattern
+  // Look for "Customer:" followed by text until "Date:" or newline
+  const customerMatch = text.match(/Customer:\s*([^(\n]+?)(?:\s+Date:|\s+\d{1,2}\/\d{1,2}\/|\n|$)/i);
+  if (customerMatch) {
+    data.customer = customerMatch[1].trim();
+    console.log('✓ Customer:', data.customer);
+  } else {
+    console.log('✗ Customer: NOT FOUND');
   }
   
   // Extract Unit Number
-  const unitMatch = text.match(/Unit No:\s*([^\s]+)/i);
+  const unitMatch = text.match(/Unit\s+No:\s*([^\s\n]+)/i);
   if (unitMatch) {
     data.unit = unitMatch[1].trim();
+    console.log('✓ Unit:', data.unit);
+  } else {
+    console.log('✗ Unit: NOT FOUND');
   }
   
-  // Extract Repair Order
-  const roMatch = text.match(/Repair Order:\s*([^\s]+)/i);
+  // Extract Repair Order - look for "Repair Order:" followed by digits
+  const roMatch = text.match(/Repair\s+Order:\s*(\d+)/i);
   if (roMatch) {
     data.ro = roMatch[1].trim();
+    console.log('✓ RO:', data.ro);
+  } else {
+    console.log('✗ RO: NOT FOUND');
   }
   
   // Extract Complaint (maps to Repair Condition)
-  const complaintMatch = text.match(/Complaint:\s*([^\n]+)/i);
+  const complaintMatch = text.match(/Complaint:\s*([^\n]+?)(?:\n|Cause:|$)/i);
   if (complaintMatch) {
     data.repairCondition = complaintMatch[1].trim();
+    console.log('✓ Complaint:', data.repairCondition);
+  } else {
+    console.log('✗ Complaint: NOT FOUND');
   }
   
-  // Extract Status (maps to Quote Status)
-  const statusMatch = text.match(/Status:\s*([^\n]+?)(?:\s+ETR:|$)/i);
+  // Extract Status (maps to Quote Status) - look for "Status:" and capture until "ETR:" or newline
+  const statusMatch = text.match(/Status:\s*([^\n]+?)(?:\s+ETR:|\s+\d{1,2}\/\d{1,2}\/|\n|$)/i);
   if (statusMatch) {
     data.quoteStatus = statusMatch[1].trim();
+    console.log('✓ Status:', data.quoteStatus);
+  } else {
+    console.log('✗ Status: NOT FOUND');
   }
+  
+  console.log('=== END PARSING ===');
   
   // Extract all notes - combine them intelligently
   const noteMatches = text.matchAll(/Note:\s*([^\n]+(?:\n(?!From:|To:)[^\n]+)*)/gi);
