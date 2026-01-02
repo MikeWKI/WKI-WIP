@@ -46,9 +46,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
       }`}
       style={{
         backgroundImage: 'url(/Splash.png)',
-        backgroundSize: 'cover',
+        backgroundSize: 'contain',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#000'
       }}
     >
       <div className="absolute inset-0 bg-black bg-opacity-40" />

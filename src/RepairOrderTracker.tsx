@@ -180,6 +180,8 @@ const RepairOrderTracker = () => {
   const [showArchives, setShowArchives] = useState<boolean>(false); // Collapsible archives dropdown
   const [filterInTriage, setFilterInTriage] = useState<boolean>(false); // Filter for active triage timers
   const [filterDwellRunning, setFilterDwellRunning] = useState<boolean>(false); // Filter for active dwell timers
+  const [filterCustomerWaiting, setFilterCustomerWaiting] = useState<boolean>(false); // Filter for customer-waiting status
+  const [filterWaitingApproval, setFilterWaitingApproval] = useState<boolean>(false); // Filter for waiting-approval status
 
   // Idle screen state
   const [showIdleScreen, setShowIdleScreen] = useState<boolean>(false);
@@ -846,6 +848,14 @@ const RepairOrderTracker = () => {
           const dwellStatus = calculateTimerStatus(order.dwellStartTime, DWELL_THRESHOLD_MS);
           return !dwellStatus.isOverdue; // Only show active (not overdue) dwell timers
         });
+      }
+      
+      if (filterCustomerWaiting) {
+        orders = orders.filter((order: Order) => order.status === 'customer-waiting');
+      }
+      
+      if (filterWaitingApproval) {
+        orders = orders.filter((order: Order) => order.status === 'waiting-approval');
       }
     }
 
@@ -1817,6 +1827,34 @@ const RepairOrderTracker = () => {
                   >
                     <Clock size={14} />
                     Dwell Running
+                  </button>
+                  
+                  <button
+                    onClick={() => setFilterCustomerWaiting(!filterCustomerWaiting)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      filterCustomerWaiting
+                        ? 'bg-orange-600 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Clock size={14} />
+                    Customer Waiting
+                  </button>
+                  
+                  <button
+                    onClick={() => setFilterWaitingApproval(!filterWaitingApproval)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      filterWaitingApproval
+                        ? 'bg-purple-600 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Clock size={14} />
+                    Waiting on Approval
                   </button>
                 </>
               )}
