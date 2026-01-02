@@ -378,10 +378,12 @@ const RepairOrderTracker = () => {
   }, [isAuthenticated]);
 
   // Timer update effect - force re-render every minute to update countdown timers
+  const [timerTick, setTimerTick] = useState(0);
+  
   useEffect(() => {
     const interval = setInterval(() => {
       // Force component re-render to update timer displays
-      setOrders(prevOrders => [...prevOrders]);
+      setTimerTick(prev => prev + 1);
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
