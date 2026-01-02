@@ -10,6 +10,7 @@ export interface Order {
   ro: string;
   bay: string;
   decisivCase?: string;
+  status?: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;

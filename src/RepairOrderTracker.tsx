@@ -14,6 +14,7 @@ interface Order {
   ro: string;
   bay: string;
   decisivCase?: string;
+  status?: string;
   firstShift: string;
   secondShift: string;
   orderedParts: string;
@@ -622,6 +623,7 @@ const RepairOrderTracker = () => {
     ro: '',
     bay: '',
     decisivCase: '',
+    status: '',
     firstShift: '',
     secondShift: '',
     orderedParts: '',
@@ -1734,15 +1736,46 @@ const RepairOrderTracker = () => {
           <div className="grid gap-4">
             {filteredOrders.map((order: Order) => {
               const orderSource = globalSearch ? getOrderSource(order) : null;
+              
+              // Determine card background based on status
+              let cardBgClass = '';
+              let cardBorderClass = '';
+              let cardHoverClass = '';
+              
+              if (order.status === 'customer-waiting') {
+                // Orange for Customer Waiting
+                cardBgClass = isDarkMode 
+                  ? 'bg-gradient-to-br from-orange-900/40 to-orange-800/30' 
+                  : 'bg-gradient-to-br from-orange-50 to-orange-100/50';
+                cardBorderClass = isDarkMode ? 'border-orange-700' : 'border-orange-300';
+                cardHoverClass = isDarkMode 
+                  ? 'hover:from-orange-800/50 hover:to-orange-700/40 hover:border-orange-600 hover:shadow-2xl hover:shadow-orange-900/20' 
+                  : 'hover:shadow-xl hover:shadow-orange-200 hover:border-orange-400';
+              } else if (order.status === 'waiting-parts') {
+                // Blue for Waiting on Parts
+                cardBgClass = isDarkMode 
+                  ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/30' 
+                  : 'bg-gradient-to-br from-blue-50 to-blue-100/50';
+                cardBorderClass = isDarkMode ? 'border-blue-700' : 'border-blue-300';
+                cardHoverClass = isDarkMode 
+                  ? 'hover:from-blue-800/50 hover:to-blue-700/40 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20' 
+                  : 'hover:shadow-xl hover:shadow-blue-200 hover:border-blue-400';
+              } else {
+                // Default - Active
+                cardBgClass = isDarkMode 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-850' 
+                  : 'bg-white';
+                cardBorderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
+                cardHoverClass = isDarkMode 
+                  ? 'hover:from-gray-750 hover:to-gray-800 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20' 
+                  : 'hover:shadow-xl hover:shadow-blue-100 hover:border-blue-300';
+              }
+              
               return (
               <div
                 key={`${order.ro}-${order.id}`}
                 onClick={() => setSelectedOrder(order)}
-                className={`border rounded-xl p-4 transition-smooth cursor-pointer animate-slide-in ${
-                  isDarkMode 
-                    ? 'bg-gradient-to-br from-gray-800 to-gray-850 border-gray-700 hover:from-gray-750 hover:to-gray-800 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/20 hover:-translate-y-1' 
-                    : 'bg-white border-gray-200 hover:shadow-xl hover:shadow-blue-100 hover:border-blue-300 hover:-translate-y-1'
-                }`}
+                className={`border rounded-xl p-4 transition-smooth cursor-pointer animate-slide-in ${cardBgClass} ${cardBorderClass} ${cardHoverClass} hover:-translate-y-1`}
               >
                 {globalSearch && orderSource && (
                   <div className="mb-3">
@@ -2022,6 +2055,22 @@ const RepairOrderTracker = () => {
                         : 'bg-white border-gray-300 text-gray-900'
                     }`}
                   />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
+                  <select
+                    value={formData.status || ''}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="">Active</option>
+                    <option value="customer-waiting">Customer Waiting</option>
+                    <option value="waiting-parts">Waiting on Parts</option>
+                  </select>
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Bay #</label>
@@ -2310,6 +2359,23 @@ const RepairOrderTracker = () => {
                       Open in Decisiv →
                     </a>
                   )}
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
+                  <select
+                    value={selectedOrder.status || ''}
+                    onChange={(e) => activeView === 'current' && selectedOrder.id && handleUpdateOrder(selectedOrder.id, 'status', e.target.value)}
+                    disabled={activeView !== 'current'}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } ${activeView !== 'current' ? 'cursor-not-allowed opacity-60' : ''}`}
+                  >
+                    <option value="">Active</option>
+                    <option value="customer-waiting">Customer Waiting</option>
+                    <option value="waiting-parts">Waiting on Parts</option>
+                  </select>
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Bay #</label>
