@@ -2002,29 +2002,29 @@ const RepairOrderTracker = () => {
                   </div>
                 )}
                 {/* Status Badge - Upper Right */}
-                {order.status && (
-                  <div className="absolute top-4 right-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
-                      order.status === 'customer-waiting'
+                <div className="absolute top-4 right-4">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                    order.status === 'customer-waiting'
+                      ? isDarkMode
+                        ? 'text-orange-400'
+                        : 'text-orange-600'
+                      : order.status === 'waiting-parts'
                         ? isDarkMode
-                          ? 'text-orange-400'
-                          : 'text-orange-600'
-                        : order.status === 'waiting-parts'
+                          ? 'text-blue-400'
+                          : 'text-blue-600'
+                        : order.status === 'waiting-approval'
                           ? isDarkMode
-                            ? 'text-blue-400'
-                            : 'text-blue-600'
-                          : order.status === 'waiting-approval'
-                            ? isDarkMode
-                              ? 'text-purple-400'
-                              : 'text-purple-600'
-                            : ''
-                    }`}>
-                      {order.status === 'customer-waiting' ? 'Customer Waiting' :
-                       order.status === 'waiting-parts' ? 'Waiting on Parts' :
-                       order.status === 'waiting-approval' ? 'Waiting on Approval' : ''}
-                    </span>
-                  </div>
-                )}
+                            ? 'text-purple-400'
+                            : 'text-purple-600'
+                          : isDarkMode
+                            ? 'text-green-400'
+                            : 'text-green-600'
+                  }`}>
+                    {order.status === 'customer-waiting' ? 'Customer Waiting' :
+                     order.status === 'waiting-parts' ? 'Waiting on Parts' :
+                     order.status === 'waiting-approval' ? 'Waiting on Approval' : 'Active'}
+                  </span>
+                </div>
                 {/* Date Information Bar */}
                 <div className={`flex flex-wrap items-center gap-4 mb-3 pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                   {order.dateAdded && (
