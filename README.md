@@ -1,6 +1,6 @@
-# WKI-WIP - Service Department Work In Progress Tracker
+# WKI RO Tracker - Repair Order Management System
 
-A modern, responsive web application for tracking repair orders and work-in-progress items at WKI Service Department.
+A modern, responsive web application for tracking repair orders at WKI Service Department.
 
 ![WKI Service Management](https://www.kenworth.com/media/w4jnzm4t/kenworth_logo-header-new-012023.png)
 

@@ -26,7 +26,7 @@ const Footer: React.FC<FooterProps> = ({ isDarkMode }) => {
                 WKI Service Department
               </span>
               <span className={`text-xs hidden md:block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Work In Progress Tracking System
+                RO Tracker
               </span>
             </div>
           </div>
@@ -57,7 +57,7 @@ const Footer: React.FC<FooterProps> = ({ isDarkMode }) => {
               </span>
             </div>
             <p className="text-xs">
-              © {currentYear} WKI Service Department
+              © {currentYear} WKI Service Department - RO Tracker
             </p>
             <p className="text-xs mt-1 hidden md:block">
               For authorized WKI personnel only

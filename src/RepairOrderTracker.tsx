@@ -648,7 +648,7 @@ const RepairOrderTracker = () => {
       });
       
       if (hasMore) {
-        emailBody += `... and ${shiftOrders.length - displayLimit} more updates (check WIP Tracker for full details)\n\n`;
+        emailBody += `... and ${shiftOrders.length - displayLimit} more updates (check RO Tracker for full details)\n\n`;
       }
     } else {
       emailBody += `UPDATED CUSTOMER RECORDS:\n`;
@@ -1184,7 +1184,7 @@ const RepairOrderTracker = () => {
               }}
             />
             <h1 className="text-3xl font-bold text-gray-800 mb-2">WKI Service Department</h1>
-            <p className="text-gray-600">Work In Progress Tracker</p>
+            <p className="text-gray-600">RO Tracker</p>
           </div>
           
           {!showNamePrompt ? (
