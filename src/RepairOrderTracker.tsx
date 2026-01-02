@@ -377,7 +377,7 @@ const RepairOrderTracker = () => {
   }, [isAuthenticated]);
 
   // Timer update effect - force re-render every minute to update countdown timers
-  const [timerTick, setTimerTick] = useState(0);
+  const [_timerTick, setTimerTick] = useState(0);
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1929,7 +1929,7 @@ const RepairOrderTracker = () => {
               <div
                 key={`${order.ro}-${order.id}`}
                 onClick={() => setSelectedOrder(order)}
-                className={`border rounded-xl p-4 transition-smooth cursor-pointer animate-slide-in ${cardBgClass} ${cardBorderClass} ${cardHoverClass} hover:-translate-y-1`}
+                className={`relative border rounded-xl p-4 transition-smooth cursor-pointer animate-slide-in ${cardBgClass} ${cardBorderClass} ${cardHoverClass} hover:-translate-y-1`}
               >
                 {globalSearch && orderSource && (
                   <div className="mb-3">
@@ -1944,6 +1944,30 @@ const RepairOrderTracker = () => {
                     }`}>
                       <Archive size={12} />
                       {orderSource === 'current' ? 'Current WIP' : orderSource}
+                    </span>
+                  </div>
+                )}
+                {/* Status Badge - Upper Right */}
+                {order.status && (
+                  <div className="absolute top-4 right-4">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                      order.status === 'customer-waiting'
+                        ? isDarkMode
+                          ? 'text-orange-400'
+                          : 'text-orange-600'
+                        : order.status === 'waiting-parts'
+                          ? isDarkMode
+                            ? 'text-blue-400'
+                            : 'text-blue-600'
+                          : order.status === 'waiting-approval'
+                            ? isDarkMode
+                              ? 'text-purple-400'
+                              : 'text-purple-600'
+                            : ''
+                    }`}>
+                      {order.status === 'customer-waiting' ? 'Customer Waiting' :
+                       order.status === 'waiting-parts' ? 'Waiting on Parts' :
+                       order.status === 'waiting-approval' ? 'Waiting on Approval' : ''}
                     </span>
                   </div>
                 )}
