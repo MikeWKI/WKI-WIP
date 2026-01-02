@@ -1113,8 +1113,10 @@ const RepairOrderTracker = () => {
       return;
     }
     
-    // Start timer - prompt for time
-    const defaultTime = new Date().toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    // Start timer - prompt for time (use local time, not UTC)
+    const now = new Date();
+    const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const defaultTime = localTime.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm in local time
     const userTime = prompt(
       `Enter start time for ${timerType} timer (or leave as-is for current time):`,
       defaultTime
@@ -1122,7 +1124,7 @@ const RepairOrderTracker = () => {
     
     if (userTime === null) return; // User cancelled
     
-    // Convert to ISO string
+    // Convert to ISO string (will be interpreted as local time, then converted to UTC)
     const startTime = userTime ? new Date(userTime).toISOString() : new Date().toISOString();
     
     try {
