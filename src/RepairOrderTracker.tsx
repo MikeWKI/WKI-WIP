@@ -3297,11 +3297,17 @@ const RepairOrderTracker = () => {
           onClick={() => setShowIdleScreen(false)}
           onMouseMove={() => setShowIdleScreen(false)}
         >
-          <img 
-            src="/idle.png" 
-            alt="Idle Screen" 
-            className="max-w-full max-h-full object-contain"
-          />
+          <div className="relative max-w-full max-h-full flex items-center justify-center">
+            <img 
+              src="/idle.png" 
+              alt="Idle Screen" 
+              className="max-w-full max-h-full object-contain"
+            />
+            {/* Left gradient fade */}
+            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none"></div>
+            {/* Right gradient fade */}
+            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none"></div>
+          </div>
         </div>
       )}
     </div>
